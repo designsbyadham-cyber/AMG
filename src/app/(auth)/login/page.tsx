@@ -7,20 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { MessageSquare, UsersRound } from "lucide-react";
+import { Car, Shield, Zap, UsersRound } from "lucide-react";
 
-// `useSearchParams` opts the component out of static prerendering
-// unless it sits under a Suspense boundary. We split the form into
-// a child component so the outer page can prerender the chrome
-// (background, card frame) while the form hydrates with the query
-// string on the client.
 export default function LoginPage() {
   return (
     <Suspense fallback={null}>
@@ -31,9 +19,6 @@ export default function LoginPage() {
 
 function LoginPageInner() {
   const searchParams = useSearchParams();
-  // Forwarded from `/join/<token>` when the visitor already has an
-  // account. After a successful sign-in we send them to the join
-  // page to accept rather than to /dashboard.
   const inviteToken = searchParams.get("invite");
 
   const [email, setEmail] = useState("");
@@ -47,18 +32,12 @@ function LoginPageInner() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setError(error.message);
       setLoading(false);
       return;
     }
-
     if (inviteToken) {
       router.push(`/join/${encodeURIComponent(inviteToken)}`);
     } else {
@@ -67,37 +46,82 @@ function LoginPageInner() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-      <Card className="w-full max-w-md border-slate-800 bg-slate-900">
-        <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            {inviteToken ? (
-              <UsersRound className="h-6 w-6 text-primary" />
-            ) : (
-              <MessageSquare className="h-6 w-6 text-primary" />
-            )}
+    <div className="flex min-h-screen">
+      {/* Left branding panel */}
+      <div className="hidden lg:flex lg:w-2/5 flex-col justify-between bg-card border-r border-border p-12">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-sm">
+            AMG
           </div>
-          <CardTitle className="text-xl text-white">
-            {inviteToken ? "Sign in to accept" : "Welcome back"}
-          </CardTitle>
-          <CardDescription className="text-slate-400">
-            {inviteToken
-              ? "Sign in and we'll take you to the invitation."
-              : "Sign in to your account"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+          <span className="text-lg font-semibold text-foreground">AMG Operations</span>
+        </div>
+
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground leading-tight">
+              Precision through detail.
+            </h1>
+            <p className="mt-3 text-muted-foreground text-base leading-relaxed">
+              Manage every customer, job, and follow-up from one place — built for the automotive upgrade shop.
+            </p>
+          </div>
+          <div className="space-y-4">
+            {[
+              { icon: Car, label: "Vehicle-first customer profiles" },
+              { icon: Zap, label: "7-stage service job pipeline" },
+              { icon: Shield, label: "10-day quality check automation" },
+            ].map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                  <Icon className="h-4 w-4 text-primary" />
+                </div>
+                <span className="text-sm text-muted-foreground">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          © {new Date().getFullYear()} AMG Operations. All rights reserved.
+        </p>
+      </div>
+
+      {/* Right form panel */}
+      <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-12">
+        {/* Mobile logo */}
+        <div className="lg:hidden flex items-center gap-2 mb-8">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-xs">
+            AMG
+          </div>
+          <span className="text-base font-semibold text-foreground">AMG Operations</span>
+        </div>
+
+        <div className="w-full max-w-sm space-y-6">
+          <div>
+            {inviteToken ? (
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                <UsersRound className="h-6 w-6 text-primary" />
+              </div>
+            ) : null}
+            <h2 className="text-2xl font-bold text-foreground">
+              {inviteToken ? "Sign in to accept" : "Welcome back"}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {inviteToken
+                ? "Sign in and we'll take you to the invitation."
+                : "Sign in to your AMG Operations account"}
+            </p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
             {error && (
               <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
                 {error}
               </div>
             )}
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email" className="text-slate-300">
-                Email
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -105,19 +129,13 @@ function LoginPageInner() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
               />
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-slate-300">
-                  Password
-                </Label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-primary hover:text-primary/80"
-                >
+                <Label htmlFor="password">Password</Label>
+                <Link href="/forgot-password" className="text-sm text-primary hover:text-primary/80">
                   Forgot password?
                 </Link>
               </div>
@@ -128,34 +146,29 @@ function LoginPageInner() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
               />
             </div>
 
             <Button
               type="submit"
               disabled={loading}
-              className="mt-2 h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-400">
+          <p className="text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Link
-              href={
-                inviteToken
-                  ? `/signup?invite=${encodeURIComponent(inviteToken)}`
-                  : "/signup"
-              }
-              className="text-primary hover:text-primary/80"
+              href={inviteToken ? `/signup?invite=${encodeURIComponent(inviteToken)}` : "/signup"}
+              className="text-primary hover:text-primary/80 font-medium"
             >
               Create account
             </Link>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
