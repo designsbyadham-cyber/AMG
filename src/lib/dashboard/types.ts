@@ -8,11 +8,22 @@ export interface MetricDelta {
 }
 
 export interface MetricsBundle {
-  activeConversations: MetricDelta
-  newContactsToday: MetricDelta
-  openDealsValue: number
-  openDealsCount: number
-  messagesSentToday: MetricDelta
+  unansweredMessages: number
+  jobsBookedToday: number
+  inWorkshop: number
+  carsReady: number
+}
+
+export interface QualityCheckDueItem {
+  dealId: string
+  contactId: string | null
+  contactName: string | null
+  contactPhone: string | null
+  carBrand: string | null
+  carModel: string | null
+  plateNumber: string | null
+  collectedAt: string
+  conversationId: string | null
 }
 
 export interface ConversationsSeriesPoint {

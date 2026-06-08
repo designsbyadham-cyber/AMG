@@ -13,6 +13,7 @@ import type {
   MetricsBundle,
   PipelineDonutData,
   PipelineStageSlice,
+  QualityCheckDueItem,
   ResponseTimeBucket,
   ResponseTimeSummary,
 } from './types'
@@ -31,72 +32,103 @@ type DB = SupabaseClient
 
 export async function loadMetrics(db: DB): Promise<MetricsBundle> {
   const todayStart = startOfLocalDay().toISOString()
-  const yesterdayStart = daysAgoStart(1).toISOString()
+
+  // Fetch all open stages so we can match by name without knowing IDs
+  const { data: stages } = await db
+    .from('pipeline_stages')
+    .select('id, name')
+
+  const stagesByName = new Map<string, string[]>()
+  for (const s of (stages ?? []) as { id: string; name: string }[]) {
+    const ids = stagesByName.get(s.name) ?? []
+    ids.push(s.id)
+    stagesByName.set(s.name, ids)
+  }
+
+  const inProgressIds = stagesByName.get('In Progress') ?? []
+  const readyIds = stagesByName.get('Ready') ?? []
 
   const [
-    openConvCur,
-    newConvToday,
-    newConvYesterday,
-    newContactsToday,
-    newContactsYesterday,
-    openDeals,
-    messagesToday,
-    messagesYesterday,
+    unansweredRes,
+    bookedTodayRes,
+    inWorkshopRes,
+    carsReadyRes,
   ] = await Promise.all([
-    db.from('conversations').select('id', { count: 'exact', head: true }).eq('status', 'open'),
     db
       .from('conversations')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'open')
-      .gte('created_at', todayStart),
+      .gt('unread_count', 0),
     db
-      .from('conversations')
+      .from('deals')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'open')
-      .gte('created_at', yesterdayStart)
-      .lt('created_at', todayStart),
-    db.from('contacts').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
-    db
-      .from('contacts')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', yesterdayStart)
-      .lt('created_at', todayStart),
-    db.from('deals').select('value, status').eq('status', 'open'),
-    db
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('sender_type', 'agent')
       .gte('created_at', todayStart),
-    db
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('sender_type', 'agent')
-      .gte('created_at', yesterdayStart)
-      .lt('created_at', todayStart),
+    inProgressIds.length > 0
+      ? db
+          .from('deals')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'open')
+          .in('stage_id', inProgressIds)
+      : Promise.resolve({ count: 0 }),
+    readyIds.length > 0
+      ? db
+          .from('deals')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'open')
+          .in('stage_id', readyIds)
+      : Promise.resolve({ count: 0 }),
   ])
 
-  const openDealsRows = (openDeals.data ?? []) as { value: number | null }[]
-  const openDealsValue = openDealsRows.reduce((sum, d) => sum + (d.value ?? 0), 0)
-
   return {
-    activeConversations: {
-      current: openConvCur.count ?? 0,
-      // "vs yesterday" on a current-state count has no clean answer
-      // without snapshots — we show the delta in NEW open conversations
-      // today vs yesterday. That's the business-meaningful daily signal.
-      previous: (newConvToday.count ?? 0) - (newConvYesterday.count ?? 0),
-    },
-    newContactsToday: {
-      current: newContactsToday.count ?? 0,
-      previous: newContactsYesterday.count ?? 0,
-    },
-    openDealsValue,
-    openDealsCount: openDealsRows.length,
-    messagesSentToday: {
-      current: messagesToday.count ?? 0,
-      previous: messagesYesterday.count ?? 0,
-    },
+    unansweredMessages: unansweredRes.count ?? 0,
+    jobsBookedToday: bookedTodayRes.count ?? 0,
+    inWorkshop: (inWorkshopRes as { count?: number | null }).count ?? 0,
+    carsReady: (carsReadyRes as { count?: number | null }).count ?? 0,
   }
+}
+
+// --- 1b. Quality Check Due (10 days post-collection) -------------------
+
+export async function loadQualityCheckDue(db: DB): Promise<QualityCheckDueItem[]> {
+  const tenDaysAgo = daysAgoStart(10).toISOString()
+  const nineDaysAgo = daysAgoStart(9).toISOString()
+  const elevenDaysAgo = daysAgoStart(11).toISOString()
+
+  const { data } = await db
+    .from('deals')
+    .select(`
+      id,
+      contact_id,
+      collected_at,
+      contact:contacts(name, phone, car_brand, car_model, plate_number),
+      conversation:conversations(id)
+    `)
+    .eq('status', 'open')
+    .gte('collected_at', elevenDaysAgo)
+    .lte('collected_at', nineDaysAgo)
+    .order('collected_at', { ascending: true })
+
+  return ((data ?? []) as unknown as Array<{
+    id: string
+    contact_id: string | null
+    collected_at: string
+    contact: { name: string | null; phone: string; car_brand: string | null; car_model: string | null; plate_number: string | null } | null
+    conversation: { id: string }[] | { id: string } | null
+  }>).map((row) => {
+    const conv = Array.isArray(row.conversation) ? row.conversation[0] : row.conversation
+    return {
+      dealId: row.id,
+      contactId: row.contact_id,
+      contactName: row.contact?.name ?? null,
+      contactPhone: row.contact?.phone ?? null,
+      carBrand: row.contact?.car_brand ?? null,
+      carModel: row.contact?.car_model ?? null,
+      plateNumber: row.contact?.plate_number ?? null,
+      collectedAt: row.collected_at,
+      conversationId: conv?.id ?? null,
+    }
+  })
 }
 
 // --- 2. Conversations over time ---------------------------------------

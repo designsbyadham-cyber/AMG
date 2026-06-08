@@ -50,16 +50,16 @@ const ROLE_CHIP: Record<
   agent: {
     icon: UserCog,
     label: "Agent",
-    // Neutral slate: the operational default.
+    // Neutral: the operational default.
     className:
-      "border-slate-700 bg-slate-800 text-slate-300",
+      "border-sidebar-border bg-sidebar-accent text-sidebar-foreground/70",
   },
   viewer: {
     icon: User,
     label: "Viewer",
-    // Muted slate: read-only role; visually quieter than agent.
+    // Muted: read-only role; visually quieter than agent.
     className:
-      "border-slate-800 bg-slate-900 text-slate-500",
+      "border-sidebar-border bg-sidebar-accent/50 text-sidebar-foreground/45",
   },
 };
 import {
@@ -89,8 +89,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inbox", label: "Inbox", icon: MessageSquare },
-  { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/pipelines", label: "Pipelines", icon: GitBranch },
+  { href: "/contacts", label: "Customers", icon: Users },
+  { href: "/pipelines", label: "Jobs", icon: GitBranch },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/automations", label: "Automations", icon: Zap },
   { href: "/flows", label: "Flows", icon: Workflow, beta: true },
@@ -157,7 +157,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         aria-label="Close menu"
         onClick={onClose}
         className={cn(
-          "fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm transition-opacity lg:hidden",
+          "fixed inset-0 z-30 bg-black/50 backdrop-blur-sm transition-opacity lg:hidden",
           open
             ? "pointer-events-auto opacity-100"
             : "pointer-events-none opacity-0",
@@ -167,7 +167,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       <aside
         className={cn(
           // Mobile: fixed drawer that slides in from the left.
-          "fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-slate-800 bg-slate-900",
+          "fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar",
           "transition-transform duration-200 ease-out will-change-transform",
           open ? "translate-x-0" : "-translate-x-full",
           // Desktop: static, always visible — reset all the mobile framing.
@@ -177,20 +177,20 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       >
         {/* Logo row. On mobile we put a close button here; on desktop the
             close button is hidden since the sidebar is always-visible. */}
-        <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-800 px-4">
+        <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border px-4">
           <Link href="/dashboard" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <MessageSquare className="h-4 w-4" />
             </div>
-            <span className="text-sm font-semibold text-white">
-              CRM Template for WhatsApp
+            <span className="text-sm font-semibold text-sidebar-foreground">
+              AMG Operations
             </span>
           </Link>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
@@ -216,7 +216,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
                       isActive
                         ? "bg-primary/10 text-primary"
-                        : "text-slate-400 hover:bg-slate-800 hover:text-white",
+                        : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     )}
                   >
                     <item.icon className="h-4 w-4" />
@@ -244,7 +244,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             })}
           </ul>
 
-          <div className="my-4 border-t border-slate-800" />
+          <div className="my-4 border-t border-sidebar-border" />
 
           <ul className="flex flex-col gap-1">
             {bottomNavItems.map((item) => {
@@ -257,7 +257,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
                       isActive
                         ? "bg-primary/10 text-primary"
-                        : "text-slate-400 hover:bg-slate-800 hover:text-white",
+                        : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     )}
                   >
                     <item.icon className="h-4 w-4" />
@@ -270,7 +270,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         </nav>
 
         {/* User section */}
-        <div className="shrink-0 border-t border-slate-800 p-3">
+        <div className="shrink-0 border-t border-sidebar-border p-3">
           {/* Account name display — surfaced only when the account
               name differs from the user's own name (see
               `showAccountStrip`). For a default solo account the two
@@ -278,7 +278,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               below; for renamed or shared accounts it tells the user
               which account they're acting in. */}
           {showAccountStrip && account?.name ? (
-            <div className="mb-2 flex items-center gap-2 px-3 text-xs text-slate-500">
+            <div className="mb-2 flex items-center gap-2 px-3 text-xs text-sidebar-foreground/45">
               <UsersRound className="size-3.5 shrink-0" />
               {/* `title=` exposes the full name on hover when it
                   gets truncated (long account names + narrow
@@ -307,7 +307,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             </div>
           ) : null}
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-slate-800/60 focus:bg-slate-800/60 focus:outline-none data-popup-open:bg-slate-800/60">
+            <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-sidebar-accent/60 focus:bg-sidebar-accent/60 focus:outline-none data-popup-open:bg-sidebar-accent/60">
               <Avatar className="size-8 shrink-0">
                 {profile?.avatar_url ? (
                   <AvatarImage
@@ -322,10 +322,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">
+                <p className="truncate text-sm font-medium text-sidebar-foreground">
                   {profile?.full_name ?? "User"}
                 </p>
-                <p className="truncate text-xs text-slate-400">
+                <p className="truncate text-xs text-sidebar-foreground/60">
                   {profile?.email ?? ""}
                 </p>
               </div>
@@ -334,14 +334,14 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               align="end"
               side="top"
               sideOffset={6}
-              className="min-w-56 bg-slate-900 text-slate-100 ring-slate-700"
+              className="min-w-56 bg-popover text-popover-foreground ring-border"
             >
               <DropdownMenuItem
                 render={
                   <Link
                     href="/settings?tab=profile"
                     onClick={onClose}
-                    className="text-slate-200 focus:bg-slate-800 focus:text-white"
+                    className="text-foreground focus:bg-muted focus:text-foreground"
                   />
                 }
               >
@@ -353,17 +353,17 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                   <Link
                     href="/settings?tab=whatsapp"
                     onClick={onClose}
-                    className="text-slate-200 focus:bg-slate-800 focus:text-white"
+                    className="text-foreground focus:bg-muted focus:text-foreground"
                   />
                 }
               >
                 <Settings className="size-4" />
                 Settings
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-slate-800" />
+              <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
                 onClick={signOut}
-                className="text-slate-200 focus:bg-slate-800 focus:text-white"
+                className="text-foreground focus:bg-muted focus:text-foreground"
               >
                 <LogOut className="size-4" />
                 Sign out

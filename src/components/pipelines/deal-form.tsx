@@ -148,6 +148,39 @@ export function DealForm({
     };
   }, [open, contactId, supabase]);
 
+  const selectedStageName = stages.find((s) => s.id === stageId)?.name ?? '';
+  const prevStageName = deal ? (stages.find((s) => s.id === deal.stage_id)?.name ?? '') : '';
+
+  async function ensureQcTag(): Promise<string | null> {
+    const QC_TAG_NAME = 'Quality Check Pending';
+    const QC_TAG_COLOR = '#f59e0b';
+    const { data: existing } = await supabase
+      .from('tags')
+      .select('id')
+      .eq('name', QC_TAG_NAME)
+      .maybeSingle();
+    if (existing) return existing.id;
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user || !accountId) return null;
+    const { data: created } = await supabase
+      .from('tags')
+      .insert({ user_id: user.id, account_id: accountId, name: QC_TAG_NAME, color: QC_TAG_COLOR })
+      .select('id')
+      .single();
+    return created?.id ?? null;
+  }
+
+  async function addQcTagToContact(cId: string) {
+    const tagId = await ensureQcTag();
+    if (!tagId) return;
+    await supabase
+      .from('contact_tags')
+      .upsert({ contact_id: cId, tag_id: tagId }, { onConflict: 'contact_id,tag_id', ignoreDuplicates: true });
+  }
+
   async function handleSave() {
     if (!title.trim() || !contactId || !stageId) {
       toast.error("Title, contact, and stage are required");
@@ -155,7 +188,10 @@ export function DealForm({
     }
     setSaving(true);
 
-    const payload = {
+    const movingToCollected = selectedStageName === 'Collected';
+    const movingAwayFromCollected = prevStageName === 'Collected' && !movingToCollected;
+
+    const payload: Record<string, unknown> = {
       title: title.trim(),
       value: parseFloat(value) || 0,
       currency,
@@ -167,13 +203,19 @@ export function DealForm({
       expected_close_date: expectedCloseDate || null,
     };
 
+    if (movingToCollected) {
+      payload.collected_at = new Date().toISOString();
+    } else if (movingAwayFromCollected) {
+      payload.collected_at = null;
+    }
+
     if (deal) {
       const { error } = await supabase
         .from("deals")
         .update(payload)
         .eq("id", deal.id);
       if (error) {
-        toast.error("Failed to save deal");
+        toast.error("Failed to save job");
         setSaving(false);
         return;
       }
@@ -196,14 +238,18 @@ export function DealForm({
         .from("deals")
         .insert({ ...payload, user_id: user.id, account_id: accountId, status: "open" });
       if (error) {
-        toast.error("Failed to create deal");
+        toast.error("Failed to create job");
         setSaving(false);
         return;
       }
     }
 
+    if (movingToCollected && contactId) {
+      await addQcTagToContact(contactId);
+    }
+
     setSaving(false);
-    toast.success(deal ? "Deal updated" : "Deal created");
+    toast.success(deal ? "Job updated" : "Job created");
     onOpenChange(false);
     onSaved();
   }
@@ -246,34 +292,33 @@ export function DealForm({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-slate-900 border-slate-700 text-slate-200 sm:max-w-lg w-full p-0"
+        className="bg-card border-border text-foreground sm:max-w-lg w-full p-0"
       >
         <div className="flex h-full flex-col">
-          <SheetHeader className="border-b border-slate-700/50 p-4">
-            <SheetTitle className="text-white">
-              {deal ? "Edit Deal" : "New Deal"}
+          <SheetHeader className="border-b border-border p-4">
+            <SheetTitle className="text-foreground">
+              {deal ? "Edit Job" : "New Job"}
             </SheetTitle>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <div className="grid gap-2">
-              <Label className="text-slate-300">Title</Label>
+              <Label>Title</Label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Deal title"
-                className="border-slate-700 bg-slate-800 text-white"
+                placeholder="Job title"
               />
             </div>
 
             <div className="grid gap-2">
-              <Label className="text-slate-300">Contact</Label>
+              <Label>Customer</Label>
               <select
                 value={contactId}
                 onChange={(e) => setContactId(e.target.value)}
-                className="h-9 w-full rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-sm text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               >
-                <option value="">Select a contact</option>
+                <option value="">Select a customer</option>
                 {contacts.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name || c.phone}
@@ -294,25 +339,26 @@ export function DealForm({
 
             <div className="grid grid-cols-[1fr_110px] gap-3">
               <div className="grid gap-2">
-                <Label className="text-slate-300">Value</Label>
+                <Label>Value</Label>
                 <div className="relative">
-                  <DollarSign className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+                  <DollarSign className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     type="number"
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     placeholder="0"
-                    className="border-slate-700 bg-slate-800 pl-7 text-white"
+                    className="pl-7"
                   />
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label className="text-slate-300">Currency</Label>
+                <Label>Currency</Label>
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="h-9 w-full rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-sm text-white outline-none focus:border-primary"
+                  className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm text-foreground outline-none focus:border-primary"
                 >
+                  <option value="AED">AED</option>
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
                   <option value="GBP">GBP</option>
@@ -321,21 +367,20 @@ export function DealForm({
             </div>
 
             <div className="grid gap-2">
-              <Label className="text-slate-300">Expected Close Date</Label>
+              <Label>Expected Completion Date</Label>
               <Input
                 type="date"
                 value={expectedCloseDate}
                 onChange={(e) => setExpectedCloseDate(e.target.value)}
-                className="border-slate-700 bg-slate-800 text-white"
               />
             </div>
 
             <div className="grid gap-2">
-              <Label className="text-slate-300">Stage</Label>
+              <Label>Stage</Label>
               <select
                 value={stageId}
                 onChange={(e) => setStageId(e.target.value)}
-                className="h-9 w-full rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-sm text-white outline-none focus:border-primary"
+                className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm text-foreground outline-none focus:border-primary"
               >
                 {stages.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -343,14 +388,19 @@ export function DealForm({
                   </option>
                 ))}
               </select>
+              {selectedStageName === 'Collected' && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Moving to Collected will trigger the 10-day quality check follow-up.
+                </p>
+              )}
             </div>
 
             <div className="grid gap-2">
-              <Label className="text-slate-300">Assigned To</Label>
+              <Label>Assigned To</Label>
               <select
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
-                className="h-9 w-full rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-sm text-white outline-none focus:border-primary"
+                className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm text-foreground outline-none focus:border-primary"
               >
                 <option value="">Unassigned</option>
                 {profiles.map((p) => (
@@ -362,18 +412,18 @@ export function DealForm({
             </div>
 
             <div className="grid gap-2">
-              <Label className="text-slate-300">Notes</Label>
+              <Label>Notes</Label>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add notes..."
-                className="min-h-[100px] border-slate-700 bg-slate-800 text-white"
+                className="min-h-[100px]"
               />
             </div>
 
             {deal && (
-              <div className="space-y-2 rounded-lg border border-slate-700 bg-slate-900/50 p-3">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+              <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Status
                 </p>
                 <div className="flex gap-2">
@@ -396,7 +446,7 @@ export function DealForm({
                     type="button"
                     onClick={() => handleStatusChange("lost")}
                     disabled={!!statusAction || deal.status === "lost"}
-                    className="flex-1 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                    className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
                   >
                     {statusAction === "lost" ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -414,21 +464,21 @@ export function DealForm({
                     variant="ghost"
                     onClick={() => handleStatusChange("open")}
                     disabled={!!statusAction}
-                    className="w-full text-slate-400 hover:text-white"
+                    className="w-full text-muted-foreground hover:text-foreground"
                   >
-                    Reopen deal
+                    Reopen job
                   </Button>
                 )}
               </div>
             )}
           </div>
 
-          <div className="border-t border-slate-700/50 bg-slate-900/80 p-4">
+          <div className="border-t border-border bg-card/80 p-4">
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="flex-1 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+                className="flex-1"
               >
                 Cancel
               </Button>
@@ -437,20 +487,20 @@ export function DealForm({
                 disabled={saving || !title.trim() || !contactId || !stageId}
                 className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                {saving ? "Saving..." : deal ? "Save Changes" : "Create Deal"}
+                {saving ? "Saving..." : deal ? "Save Changes" : "Create Job"}
               </Button>
             </div>
 
             {deal &&
               (confirmDelete ? (
-                <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs">
-                  <span className="text-red-300">Delete this deal?</span>
+                <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs">
+                  <span className="text-destructive">Delete this job?</span>
                   <div className="flex gap-1">
                     <button
                       type="button"
                       onClick={() => setConfirmDelete(false)}
                       disabled={deleting}
-                      className="rounded px-2 py-1 text-slate-300 hover:bg-slate-800"
+                      className="rounded px-2 py-1 text-muted-foreground hover:bg-muted"
                     >
                       Cancel
                     </button>
@@ -458,7 +508,7 @@ export function DealForm({
                       type="button"
                       onClick={handleDelete}
                       disabled={deleting}
-                      className="rounded bg-red-600 px-2 py-1 font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                      className="rounded bg-destructive px-2 py-1 font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
                     >
                       {deleting ? "Deleting..." : "Confirm"}
                     </button>
@@ -468,10 +518,10 @@ export function DealForm({
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(true)}
-                  className="mt-3 flex w-full items-center justify-center gap-1 text-xs text-red-400 hover:text-red-300"
+                  className="mt-3 flex w-full items-center justify-center gap-1 text-xs text-destructive hover:text-destructive/80"
                 >
                   <Trash2 className="h-3 w-3" />
-                  Delete Deal
+                  Delete Job
                 </button>
               ))}
           </div>

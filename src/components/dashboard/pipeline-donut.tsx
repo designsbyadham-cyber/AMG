@@ -12,10 +12,10 @@ interface PipelineDonutProps {
 
 export function PipelineDonut({ data, loading }: PipelineDonutProps) {
   return (
-    <section className="flex h-full flex-col rounded-xl border border-slate-800 bg-slate-900">
-      <header className="border-b border-slate-800 px-5 py-4">
-        <h2 className="text-sm font-semibold text-white">Pipeline Value</h2>
-        <p className="mt-0.5 text-xs text-slate-500">
+    <section className="flex h-full flex-col rounded-xl border border-border bg-card">
+      <header className="border-b border-border px-5 py-4">
+        <h2 className="text-sm font-semibold text-foreground">Pipeline Value</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
           Open deals by stage
         </p>
       </header>
@@ -40,11 +40,11 @@ export function PipelineDonut({ data, loading }: PipelineDonutProps) {
                     style={{ background: s.color }}
                     aria-hidden
                   />
-                  <span className="flex-1 truncate text-slate-300">{s.name}</span>
-                  <span className="text-slate-500 tabular-nums">
+                  <span className="flex-1 truncate text-foreground">{s.name}</span>
+                  <span className="text-muted-foreground tabular-nums">
                     {s.dealCount} deal{s.dealCount === 1 ? '' : 's'}
                   </span>
-                  <span className="w-20 text-right text-slate-300 tabular-nums">
+                  <span className="w-20 text-right text-foreground tabular-nums">
                     {formatCurrencyShort(s.totalValue)}
                   </span>
                 </li>
@@ -57,12 +57,6 @@ export function PipelineDonut({ data, loading }: PipelineDonutProps) {
   )
 }
 
-// ------------------------------------------------------------
-// SVG ring. 200×200 viewBox, 12px ring width. We draw one <path>
-// per stage using an SVG arc from startAngle → endAngle. Gaps
-// between segments are implied by a thin slate-900 stroke between
-// them for a cleaner look.
-// ------------------------------------------------------------
 function Donut({ data }: { data: PipelineDonutData }) {
   const size = 200
   const r = 80
@@ -70,9 +64,6 @@ function Donut({ data }: { data: PipelineDonutData }) {
   const cx = size / 2
   const cy = size / 2
 
-  // Small slices would render as slivers that disappear into stroke
-  // rounding. We give each stage a floor share purely for rendering,
-  // but keep the labels/legend honest with the actual totals.
   const totalRaw = data.totalValue || 1
   const minFrac = 0.02
   const rawShares = data.stages.map((s) => s.totalValue / totalRaw)
@@ -80,9 +71,6 @@ function Donut({ data }: { data: PipelineDonutData }) {
   const floorSum = floored.reduce((a, b) => a + b, 0)
   const shares = floored.map((x) => x / floorSum)
 
-  // Build a cumulative-offset array, then map stages → arc paths. Using
-  // a pre-computed offsets array avoids the Next 16 React Compiler's
-  // "Cannot reassign variable after render completes" rule.
   const offsets: number[] = [0]
   for (let i = 0; i < shares.length; i++) offsets.push(offsets[i] + shares[i])
   const segments = data.stages.map((s, i) => {
@@ -95,7 +83,7 @@ function Donut({ data }: { data: PipelineDonutData }) {
     <div className="flex items-center justify-center">
       <svg viewBox={`0 0 ${size} ${size}`} className="h-48 w-48" role="img" aria-label="Pipeline value by stage">
         {/* background ring */}
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgb(30 41 59)" strokeWidth={ringWidth} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgb(229 231 235)" strokeWidth={ringWidth} />
         {segments.map((seg) => (
           <path
             key={seg.id}
@@ -106,12 +94,12 @@ function Donut({ data }: { data: PipelineDonutData }) {
             strokeLinecap="butt"
           />
         ))}
-        {/* center label */}
         <text
           x={cx}
           y={cy - 6}
           textAnchor="middle"
-          className="fill-slate-500 text-[11px]"
+          fill="oklch(0.48 0 0)"
+          fontSize="11"
         >
           Total
         </text>
@@ -119,7 +107,9 @@ function Donut({ data }: { data: PipelineDonutData }) {
           x={cx}
           y={cy + 14}
           textAnchor="middle"
-          className="fill-white text-[18px] font-semibold tabular-nums"
+          fill="oklch(0.13 0 0)"
+          fontSize="18"
+          fontWeight="600"
         >
           {formatCurrencyShort(data.totalValue)}
         </text>

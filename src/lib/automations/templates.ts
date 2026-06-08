@@ -10,6 +10,7 @@ export type TemplateSlug =
   | 'out_of_office'
   | 'lead_qualifier'
   | 'follow_up_reminder'
+  | 'quality_check_followup'
 
 export interface TemplateStepSeed {
   step_type: AutomationStepType
@@ -122,6 +123,31 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
           text:
             "Just circling back — did you have any other questions for us? Happy to help!",
         },
+      },
+    ],
+  },
+  quality_check_followup: {
+    slug: 'quality_check_followup',
+    name: '10-Day Quality Check',
+    description:
+      'Automatically sends a WhatsApp follow-up 10 days after a job is collected to check customer satisfaction.',
+    trigger_type: 'tag_added',
+    trigger_config: { tag_id: '' },
+    steps: [
+      {
+        step_type: 'wait',
+        step_config: { amount: 10, unit: 'days' },
+      },
+      {
+        step_type: 'send_message',
+        step_config: {
+          text:
+            "Hi! 👋 It's been 10 days since we completed your vehicle upgrade at AMG Operations. We'd love to hear how everything is going — are you happy with the results? Feel free to reply anytime! 🚗✨",
+        },
+      },
+      {
+        step_type: 'remove_tag',
+        step_config: { tag_id: '' },
       },
     ],
   },

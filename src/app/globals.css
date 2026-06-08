@@ -69,7 +69,47 @@
  * project/Color Themes.html — change one, change the other.
  * ============================================================ */
 
+/* `:root` mirrors Sunlight so default visitors render correctly
+ * before JS runs (boot script then applies saved preference). */
 :root,
+html[data-theme="sunlight"] {
+  --background: oklch(0.97 0 0);
+  --foreground: oklch(0.13 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.13 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.13 0 0);
+  --primary: oklch(0.82 0.17 92);
+  --primary-foreground: oklch(0.14 0.02 90);
+  --primary-hover: oklch(0.76 0.16 92);
+  --primary-soft: oklch(0.82 0.17 92 / 0.12);
+  --primary-soft-2: oklch(0.82 0.17 92 / 0.22);
+  --secondary: oklch(0.94 0 0);
+  --secondary-foreground: oklch(0.13 0 0);
+  --muted: oklch(0.94 0 0);
+  --muted-foreground: oklch(0.48 0 0);
+  --accent: oklch(0.94 0 0);
+  --accent-foreground: oklch(0.13 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.88 0 0);
+  --ring: oklch(0.82 0.17 92);
+  --chart-1: oklch(0.585 0.2 254);
+  --chart-2: oklch(0.65 0.16 220);
+  --chart-3: oklch(0.48 0.18 262);
+  --chart-4: oklch(0.72 0.13 210);
+  --chart-5: oklch(0.38 0.15 265);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.17 0.016 250);
+  --sidebar-foreground: oklch(0.93 0 0);
+  --sidebar-primary: oklch(0.82 0.17 92);
+  --sidebar-primary-foreground: oklch(0.14 0.02 90);
+  --sidebar-accent: oklch(0.24 0.015 250);
+  --sidebar-accent-foreground: oklch(0.93 0 0);
+  --sidebar-border: oklch(0.25 0.015 250);
+  --sidebar-ring: oklch(0.82 0.17 92);
+}
+
 html[data-theme="violet"] {
   --background: oklch(0.13 0.01 260);
   --foreground: oklch(0.985 0 0);

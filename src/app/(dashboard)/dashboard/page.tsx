@@ -1,12 +1,15 @@
 "use client"
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import {
   MessageSquare,
-  UserPlus,
-  DollarSign,
-  Send,
+  Wrench,
+  CheckCircle2,
+  CalendarCheck,
+  ClipboardCheck,
+  ExternalLink,
 } from 'lucide-react'
 
 import {
@@ -14,6 +17,7 @@ import {
   loadConversationsSeries,
   loadMetrics,
   loadPipelineDonut,
+  loadQualityCheckDue,
   loadResponseTime,
 } from '@/lib/dashboard/queries'
 import type {
@@ -21,6 +25,7 @@ import type {
   ConversationsSeriesPoint,
   MetricsBundle,
   PipelineDonutData,
+  QualityCheckDueItem,
   ResponseTimeSummary,
 } from '@/lib/dashboard/types'
 
@@ -38,10 +43,10 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
 
+  const [qcDue, setQcDue] = useState<QualityCheckDueItem[] | null>(null)
+  const [qcLoading, setQcLoading] = useState(true)
+
   const [range, setRange] = useState<RangeDays>(30)
-  // Keep a cache per range so switching tabs doesn't re-fetch what we
-  // already have. Ranges the user hasn't opened yet stay null and
-  // trigger a fetch on first view.
   const [series, setSeries] = useState<Record<RangeDays, ConversationsSeriesPoint[] | null>>({
     7: null,
     30: null,
@@ -61,13 +66,15 @@ export default function DashboardPage() {
   const loadAll = useCallback(() => {
     const db = createClient()
 
-    // Kick everything off in parallel. Each block has its own
-    // setState + finally so a slow query doesn't hold up faster
-    // sections — each widget shows its own skeleton independently.
     void loadMetrics(db)
       .then((m) => setMetrics(m))
       .catch((err) => console.error('[dashboard] metrics failed:', err))
       .finally(() => setMetricsLoading(false))
+
+    void loadQualityCheckDue(db)
+      .then((q) => setQcDue(q))
+      .catch((err) => console.error('[dashboard] qc failed:', err))
+      .finally(() => setQcLoading(false))
 
     void loadConversationsSeries(db, 30)
       .then((s) => setSeries((prev) => ({ ...prev, 30: s })))
@@ -84,9 +91,6 @@ export default function DashboardPage() {
       .catch((err) => console.error('[dashboard] response time failed:', err))
       .finally(() => setResponseTimeLoading(false))
 
-    // Fetch up to 50 so the biggest page-size option in the feed
-    // (50 rows) is already in memory — switching sizes then becomes
-    // a pure client-side slice with no extra round trip.
     void loadActivity(db, 50)
       .then((a) => setActivity(a))
       .catch((err) => console.error('[dashboard] activity failed:', err))
@@ -97,10 +101,6 @@ export default function DashboardPage() {
     loadAll()
   }, [loadAll])
 
-  // Range switch handler — kept in an event callback (not an effect)
-  // so the setState calls stay out of the react-hooks/set-state-in-effect
-  // rule's way. The cached bucket check means switching back to a
-  // previously-viewed range is instant and doesn't re-fetch.
   const handleRangeChange = useCallback(
     (r: RangeDays) => {
       setRange(r)
@@ -119,60 +119,98 @@ export default function DashboardPage() {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Live analytics across conversations, contacts, deals, broadcasts, and automations.
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Live overview of AMG Operations — messages, jobs, and quality checks.
         </p>
       </div>
 
-      {/* Metric cards */}
+      {/* AMG Metric cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metricsLoading || !metrics ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
             <MetricCard
-              title="Active Conversations"
-              value={metrics.activeConversations.current.toLocaleString()}
+              title="Unanswered Messages"
+              value={metrics.unansweredMessages.toLocaleString()}
               icon={MessageSquare}
-              delta={{
-                sign: metrics.activeConversations.previous,
-                label: deltaLabel(metrics.activeConversations.previous, 'new today vs yesterday'),
-              }}
+              subtitle="Open conversations with unread messages"
             />
             <MetricCard
-              title="New Contacts Today"
-              value={metrics.newContactsToday.current.toLocaleString()}
-              icon={UserPlus}
-              delta={{
-                sign:
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                label: deltaLabel(
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                  'vs yesterday',
-                ),
-              }}
+              title="Jobs Booked Today"
+              value={metrics.jobsBookedToday.toLocaleString()}
+              icon={CalendarCheck}
+              subtitle="New service jobs created today"
             />
             <MetricCard
-              title="Open Deals Value"
-              value={formatCurrency(metrics.openDealsValue)}
-              icon={DollarSign}
-              subtitle={`${metrics.openDealsCount} open deal${metrics.openDealsCount === 1 ? '' : 's'}`}
+              title="In Workshop"
+              value={metrics.inWorkshop.toLocaleString()}
+              icon={Wrench}
+              subtitle="Jobs currently in progress"
             />
             <MetricCard
-              title="Messages Sent Today"
-              value={metrics.messagesSentToday.current.toLocaleString()}
-              icon={Send}
-              delta={{
-                sign:
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                label: deltaLabel(
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                  'vs yesterday',
-                ),
-              }}
+              title="Cars Ready"
+              value={metrics.carsReady.toLocaleString()}
+              icon={CheckCircle2}
+              subtitle="Completed jobs awaiting collection"
             />
           </>
+        )}
+      </div>
+
+      {/* Quality Check Due section */}
+      <div className="rounded-xl border border-border bg-card">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+          <ClipboardCheck className="size-4 text-amber-500" />
+          <h2 className="text-sm font-semibold text-foreground">
+            Quality Check Due
+          </h2>
+          <span className="ml-auto text-xs text-muted-foreground">10 days post-collection</span>
+        </div>
+
+        {qcLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <div className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        ) : !qcDue || qcDue.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-10">
+            <CheckCircle2 className="size-8 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">No quality checks due today.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {qcDue.map((item) => {
+              const vehicle = [item.carBrand, item.carModel].filter(Boolean).join(' ') || null
+              const daysAgo = Math.floor(
+                (Date.now() - new Date(item.collectedAt).getTime()) / (1000 * 60 * 60 * 24),
+              )
+              return (
+                <div key={item.dealId} className="flex items-center gap-4 px-5 py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {item.contactName || item.contactPhone || 'Unknown customer'}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {[vehicle, item.plateNumber].filter(Boolean).join(' · ') || 'No vehicle info'}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-xs text-muted-foreground">Collected {daysAgo}d ago</p>
+                  </div>
+                  {item.conversationId && (
+                    <Link
+                      href={`/inbox?c=${item.conversationId}`}
+                      className="shrink-0 inline-flex items-center gap-1 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      <ExternalLink className="size-3" />
+                      Message
+                    </Link>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         )}
       </div>
 
@@ -180,12 +218,6 @@ export default function DashboardPage() {
       <QuickActions />
 
       {/* Charts row */}
-      {/* items-stretch (the grid default) stretches the two columns to
-          match the tallest sibling; adding h-full on each wrapper and
-          on the inner panels makes both cards actually fill that
-          stretched height so their rounded borders line up. Without
-          this, the pipeline card rendered at its natural (shorter)
-          height while the line chart drove the row height. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="h-full lg:col-span-3">
           <ConversationsChart
@@ -207,21 +239,4 @@ export default function DashboardPage() {
       <ActivityFeed items={activity} loading={activityLoading} />
     </div>
   )
-}
-
-// ------------------------------------------------------------
-
-function formatCurrency(v: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(v)
-}
-
-function deltaLabel(delta: number, suffix: string): string {
-  if (delta === 0) return `No change ${suffix}`
-  const sign = delta > 0 ? '+' : ''
-  return `${sign}${delta.toLocaleString()} ${suffix}`
 }

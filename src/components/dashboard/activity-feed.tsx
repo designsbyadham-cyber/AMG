@@ -26,37 +26,29 @@ type PageSize = (typeof PAGE_SIZES)[number]
 
 interface KindTheme {
   icon: ComponentType<{ className?: string }>
-  /** Tailwind classes for the round icon badge + label color. */
   badge: string
 }
 
 const KIND_THEME: Record<ActivityKind, KindTheme> = {
-  message: { icon: MessageSquare, badge: 'bg-blue-500/10 text-blue-400' },
+  message: { icon: MessageSquare, badge: 'bg-blue-500/10 text-blue-500' },
   contact: { icon: UserPlus, badge: 'bg-primary/10 text-primary' },
   deal: { icon: Briefcase, badge: 'bg-primary/10 text-primary' },
-  broadcast: { icon: Radio, badge: 'bg-amber-500/10 text-amber-400' },
-  automation: { icon: Zap, badge: 'bg-rose-500/10 text-rose-400' },
+  broadcast: { icon: Radio, badge: 'bg-amber-500/10 text-amber-500' },
+  automation: { icon: Zap, badge: 'bg-rose-500/10 text-rose-500' },
 }
 
 export function ActivityFeed({ items, loading }: ActivityFeedProps) {
-  // Start at 5 — a quick scan of the most recent events without
-  // dominating vertical real estate. User expands explicitly via the
-  // footer control when they want deeper history.
   const [pageSize, setPageSize] = useState<PageSize>(5)
 
   const totalLoaded = items?.length ?? 0
   const visible = items?.slice(0, pageSize) ?? []
-  // A size option is "useful" if picking it would reveal rows the
-  // smaller option doesn't already show. With PAGE_SIZES=[5,10,20,50]:
-  // "10" is useful only once we've loaded ≥6 items, "20" once ≥11, etc.
-  // The smallest option is always enabled.
   const isSizeUseful = (size: PageSize, i: number) =>
     i === 0 || totalLoaded > PAGE_SIZES[i - 1]
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900">
-      <header className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-        <h2 className="text-sm font-semibold text-white">Recent Activity</h2>
+    <section className="rounded-xl border border-border bg-card">
+      <header className="flex items-center justify-between border-b border-border px-5 py-4">
+        <h2 className="text-sm font-semibold text-foreground">Recent Activity</h2>
         <Link
           href="/inbox"
           className="text-xs font-medium text-primary hover:text-primary/80"
@@ -81,13 +73,11 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
         </div>
       ) : (
         <>
-          <ul className="divide-y divide-slate-800">
+          <ul className="divide-y divide-border">
             {visible.map((it, i) => {
               const theme = KIND_THEME[it.kind]
               const Icon = theme.icon
-              // Alternating row background for scanability — dark-theme
-              // translation of the spec's white / #f9fafb stripes.
-              const stripe = i % 2 === 0 ? 'bg-transparent' : 'bg-slate-900/40'
+              const stripe = i % 2 === 0 ? 'bg-transparent' : 'bg-muted/30'
               const row = (
                 <div className="flex items-center gap-3 px-5 py-2.5">
                   <span
@@ -98,16 +88,16 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
                   >
                     <Icon className="h-3.5 w-3.5" />
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-slate-200">
+                  <span className="min-w-0 flex-1 truncate text-sm text-foreground">
                     {it.text}
                   </span>
-                  <span className="flex-shrink-0 text-xs text-slate-500 tabular-nums">
+                  <span className="flex-shrink-0 text-xs text-muted-foreground tabular-nums">
                     {relativeTime(it.at)}
                   </span>
                 </div>
               )
               return (
-                <li key={it.id} className={cn(stripe, 'transition-colors hover:bg-slate-800/40')}>
+                <li key={it.id} className={cn(stripe, 'transition-colors hover:bg-muted/40')}>
                   {it.href ? (
                     <Link href={it.href} className="block">
                       {row}
@@ -119,13 +109,13 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
               )
             })}
           </ul>
-          <footer className="flex items-center justify-between border-t border-slate-800 px-5 py-3 text-xs">
-            <span className="text-slate-500 tabular-nums">
+          <footer className="flex items-center justify-between border-t border-border px-5 py-3 text-xs">
+            <span className="text-muted-foreground tabular-nums">
               Showing {visible.length} of {totalLoaded}
               {totalLoaded === 50 ? '+' : ''}
             </span>
             <div className="flex items-center gap-1">
-              <span className="mr-1 text-slate-500">Show</span>
+              <span className="mr-1 text-muted-foreground">Show</span>
               {PAGE_SIZES.map((size, i) => {
                 const disabled = !isSizeUseful(size, i)
                 return (
@@ -137,9 +127,9 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
                     className={cn(
                       'rounded-md px-2 py-1 font-medium tabular-nums transition-colors',
                       pageSize === size
-                        ? 'bg-slate-700 text-white'
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-white',
-                      disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-slate-400',
+                        ? 'bg-muted text-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground',
                     )}
                   >
                     {size}

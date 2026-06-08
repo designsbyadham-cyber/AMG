@@ -15,6 +15,7 @@ import {
   Clock,
   Users,
   PhoneCall,
+  ClipboardCheck,
   Loader2,
 } from "lucide-react"
 
@@ -48,6 +49,7 @@ const TEMPLATE_ORDER: TemplateSlug[] = [
   "out_of_office",
   "lead_qualifier",
   "follow_up_reminder",
+  "quality_check_followup",
 ]
 
 const TEMPLATE_ICON: Record<TemplateSlug, typeof Zap> = {
@@ -55,6 +57,7 @@ const TEMPLATE_ICON: Record<TemplateSlug, typeof Zap> = {
   out_of_office: Clock,
   lead_qualifier: Users,
   follow_up_reminder: PhoneCall,
+  quality_check_followup: ClipboardCheck,
 }
 
 export default function AutomationsPage() {

@@ -34,13 +34,15 @@ import { GatedButton } from "@/components/ui/gated-button";
 // agent+. The two CTAs gate on different `useCan` capabilities,
 // not on different copy.
 
-// Spec-defined seed — name and color per the product spec.
+// AMG Operations — 7-stage service pipeline
 const SPEC_DEFAULT_STAGES = [
-  { name: "New Lead", color: "#3b82f6", position: 0 }, // blue
-  { name: "Qualified", color: "#eab308", position: 1 }, // yellow
-  { name: "Proposal Sent", color: "#f97316", position: 2 }, // orange
-  { name: "Negotiation", color: "#8b5cf6", position: 3 }, // purple
-  { name: "Won", color: "#22c55e", position: 4 }, // green
+  { name: "Inquiry",     color: "#3b82f6", position: 0 }, // blue
+  { name: "Quoted",      color: "#f59e0b", position: 1 }, // amber
+  { name: "Booked",      color: "#8b5cf6", position: 2 }, // purple
+  { name: "In Progress", color: "#f97316", position: 3 }, // orange
+  { name: "QC",          color: "#06b6d4", position: 4 }, // cyan
+  { name: "Ready",       color: "#10b981", position: 5 }, // green
+  { name: "Collected",   color: "#1d4ed8", position: 6 }, // dark blue
 ];
 
 export default function PipelinesPage() {
@@ -114,7 +116,7 @@ export default function PipelinesPage() {
 
     const { data: pipeline, error } = await supabase
       .from("pipelines")
-      .insert({ user_id: user.id, name: "Sales Pipeline" })
+      .insert({ user_id: user.id, name: "Service Jobs" })
       .select()
       .single();
 
@@ -210,20 +212,68 @@ export default function PipelinesPage() {
 
   const handleDealMoved = useCallback(
     async (dealId: string, newStageId: string) => {
+      const newStage = stages.find((s) => s.id === newStageId);
+      const deal = deals.find((d) => d.id === dealId);
+      const prevStage = deal ? stages.find((s) => s.id === deal.stage_id) : null;
+      const movingToCollected = newStage?.name === "Collected";
+      const movingAwayFromCollected = prevStage?.name === "Collected" && !movingToCollected;
+
       // Optimistic update — board already animated; just persist.
       setDeals((prev) =>
         prev.map((d) => (d.id === dealId ? { ...d, stage_id: newStageId } : d)),
       );
+
+      const updatePayload: Record<string, unknown> = { stage_id: newStageId };
+      if (movingToCollected) updatePayload.collected_at = new Date().toISOString();
+      if (movingAwayFromCollected) updatePayload.collected_at = null;
+
       const { error } = await supabase
         .from("deals")
-        .update({ stage_id: newStageId })
+        .update(updatePayload)
         .eq("id", dealId);
       if (error) {
-        toast.error("Failed to move deal");
+        toast.error("Failed to move job");
         refreshDeals();
+        return;
+      }
+
+      // Add QC tag to contact when collected
+      if (movingToCollected && deal?.contact_id) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const user = session?.user;
+        if (user) {
+          // Find or create "Quality Check Pending" tag
+          let { data: tag } = await supabase
+            .from("tags")
+            .select("id")
+            .eq("name", "Quality Check Pending")
+            .maybeSingle();
+          if (!tag) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("account_id")
+              .eq("user_id", user.id)
+              .single();
+            if (profile?.account_id) {
+              const { data: created } = await supabase
+                .from("tags")
+                .insert({ user_id: user.id, account_id: profile.account_id, name: "Quality Check Pending", color: "#f59e0b" })
+                .select("id")
+                .single();
+              tag = created;
+            }
+          }
+          if (tag) {
+            await supabase
+              .from("contact_tags")
+              .upsert({ contact_id: deal.contact_id, tag_id: tag.id }, { onConflict: "contact_id,tag_id", ignoreDuplicates: true });
+          }
+        }
       }
     },
-    [supabase, refreshDeals],
+    [supabase, refreshDeals, stages, deals],
   );
 
   const handleAddDeal = useCallback(
@@ -289,12 +339,12 @@ export default function PipelinesPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div className="h-8 w-48 animate-pulse rounded bg-slate-800" />
-          <div className="h-9 w-28 animate-pulse rounded-lg bg-slate-800" />
+          <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+          <div className="h-9 w-28 animate-pulse rounded-lg bg-muted" />
         </div>
         <div className="flex gap-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-96 w-72 animate-pulse rounded-xl bg-slate-800/50" />
+          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <div key={i} className="h-96 w-72 animate-pulse rounded-xl bg-muted/50" />
           ))}
         </div>
       </div>
@@ -309,20 +359,20 @@ export default function PipelinesPage() {
           {/* Pipeline selector dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white hover:bg-slate-800 transition-colors data-[popup-open]:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors data-[popup-open]:bg-muted"
             >
               <GitBranch className="h-4 w-4 text-primary" />
               <span className="font-semibold">
                 {selectedPipeline?.name ?? "Select Pipeline"}
               </span>
-              <ChevronDown className="h-4 w-4 text-slate-400" />
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="w-64 border-slate-700 bg-slate-900 text-slate-200"
+              className="w-64"
             >
               {pipelines.length === 0 && (
-                <DropdownMenuItem disabled className="text-slate-500">
+                <DropdownMenuItem disabled className="text-muted-foreground">
                   No pipelines yet
                 </DropdownMenuItem>
               )}
@@ -330,22 +380,15 @@ export default function PipelinesPage() {
                 <DropdownMenuItem
                   key={p.id}
                   onClick={() => setSelectedPipelineId(p.id)}
-                  className={
-                    p.id === selectedPipelineId
-                      ? "text-primary"
-                      : "text-slate-300"
-                  }
+                  className={p.id === selectedPipelineId ? "text-primary" : ""}
                 >
                   <GitBranch className="mr-2 h-3.5 w-3.5" />
                   {p.name}
                 </DropdownMenuItem>
               ))}
-              <DropdownMenuSeparator className="bg-slate-700" />
+              <DropdownMenuSeparator />
               {selectedPipeline && (
-                <DropdownMenuItem
-                  onClick={() => setSettingsOpen(true)}
-                  className="text-slate-300"
-                >
+                <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
                   <Settings className="mr-2 h-3.5 w-3.5" />
                   Manage Pipelines
                 </DropdownMenuItem>
@@ -360,33 +403,32 @@ export default function PipelinesPage() {
             canAct={canEditSettings}
             gateReason="create pipelines"
             onClick={() => setNewPipelineOpen(true)}
-            className="border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
           >
             <Plus className="mr-1 h-4 w-4" />
             Add Pipeline
           </GatedButton>
           <GatedButton
             canAct={canCreateDeals}
-            gateReason="create deals"
+            gateReason="create jobs"
             disabled={!selectedPipelineId || stages.length === 0}
             onClick={() => handleAddDeal()}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="mr-1 h-4 w-4" />
-            Add Deal
+            Add Job
           </GatedButton>
         </div>
       </div>
 
       {/* Board */}
       {pipelines.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-700 py-20">
-          <GitBranch className="h-12 w-12 text-slate-600" />
-          <h3 className="mt-4 text-lg font-medium text-white">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20">
+          <GitBranch className="h-12 w-12 text-muted-foreground/40" />
+          <h3 className="mt-4 text-lg font-medium text-foreground">
             No pipelines yet
           </h3>
-          <p className="mt-2 text-sm text-slate-400">
-            Create a pipeline to start tracking deals
+          <p className="mt-2 text-sm text-muted-foreground">
+            Create a pipeline to start tracking service jobs
           </p>
           <GatedButton
             canAct={canEditSettings}
@@ -413,30 +455,29 @@ export default function PipelinesPage() {
 
       {/* New Pipeline Dialog */}
       <Dialog open={newPipelineOpen} onOpenChange={setNewPipelineOpen}>
-        <DialogContent className="sm:max-w-sm bg-slate-900 border-slate-700">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white">New Pipeline</DialogTitle>
+            <DialogTitle>New Pipeline</DialogTitle>
           </DialogHeader>
           <div className="py-2">
-            <Label className="text-slate-300">Pipeline Name</Label>
+            <Label>Pipeline Name</Label>
             <Input
               value={newPipelineName}
               onChange={(e) => setNewPipelineName(e.target.value)}
-              placeholder="e.g., Enterprise Sales"
-              className="mt-2 bg-slate-800 border-slate-700 text-white"
+              placeholder="e.g., Workshop Queue"
+              className="mt-2"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleCreatePipeline();
               }}
             />
-            <p className="mt-2 text-xs text-slate-400">
-              Default stages (New Lead → Won) will be created automatically.
+            <p className="mt-2 text-xs text-muted-foreground">
+              Default stages (Inquiry → Collected) will be created automatically.
             </p>
           </div>
-          <DialogFooter className="bg-slate-900/50 border-slate-700">
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setNewPipelineOpen(false)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
             >
               Cancel
             </Button>

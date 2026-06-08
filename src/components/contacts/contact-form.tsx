@@ -16,8 +16,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
+
+const SERVICE_TYPES = [
+  'Interior Upgrades',
+  'Exterior Upgrades',
+  'Detailing & Protection',
+  'Tinting',
+] as const;
 
 interface ContactFormProps {
   open: boolean;
@@ -38,10 +44,24 @@ export function ContactForm({
   const { accountId } = useAuth();
   const isEdit = !!contact;
 
+  // Customer Info
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
+
+  // Vehicle Details
+  const [carBrand, setCarBrand] = useState('');
+  const [carModel, setCarModel] = useState('');
+  const [carYear, setCarYear] = useState('');
+  const [carTrim, setCarTrim] = useState('');
+  const [vin, setVin] = useState('');
+  const [plateNumber, setPlateNumber] = useState('');
+
+  // Service
+  const [serviceType, setServiceType] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+
   const [saving, setSaving] = useState(false);
 
   const [tags, setTags] = useState<Tag[]>([]);
@@ -54,6 +74,14 @@ export function ContactForm({
       setPhone(contact?.phone ?? '');
       setEmail(contact?.email ?? '');
       setCompany(contact?.company ?? '');
+      setCarBrand(contact?.car_brand ?? '');
+      setCarModel(contact?.car_model ?? '');
+      setCarYear(contact?.car_year != null ? String(contact.car_year) : '');
+      setCarTrim(contact?.car_trim ?? '');
+      setVin(contact?.vin ?? '');
+      setPlateNumber(contact?.plate_number ?? '');
+      setServiceType(contact?.service_type ?? '');
+      setJobDescription(contact?.job_description ?? '');
       setSelectedTagIds(contactTags.map((ct) => ct.tag_id));
       fetchTags();
     }
@@ -95,6 +123,17 @@ export function ContactForm({
       if (!user) throw new Error('Not authenticated');
       if (!accountId) throw new Error('Your profile is not linked to an account.');
 
+      const vehiclePayload = {
+        car_brand: carBrand.trim() || null,
+        car_model: carModel.trim() || null,
+        car_year: carYear ? parseInt(carYear, 10) : null,
+        car_trim: carTrim.trim() || null,
+        vin: vin.trim() || null,
+        plate_number: plateNumber.trim() || null,
+        service_type: serviceType || null,
+        job_description: jobDescription.trim() || null,
+      };
+
       let contactId = contact?.id;
 
       if (isEdit && contactId) {
@@ -105,6 +144,7 @@ export function ContactForm({
             phone: phone.trim(),
             email: email.trim() || null,
             company: company.trim() || null,
+            ...vehiclePayload,
             updated_at: new Date().toISOString(),
           })
           .eq('id', contactId);
@@ -119,6 +159,7 @@ export function ContactForm({
             phone: phone.trim(),
             email: email.trim() || null,
             company: company.trim() || null,
+            ...vehiclePayload,
           })
           .select('id')
           .single();
@@ -145,11 +186,11 @@ export function ContactForm({
         }
       }
 
-      toast.success(isEdit ? 'Contact updated' : 'Contact created');
+      toast.success(isEdit ? 'Customer updated' : 'Customer created');
       onOpenChange(false);
       onSaved();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save contact';
+      const message = err instanceof Error ? err.message : 'Failed to save customer';
       toast.error(message);
     } finally {
       setSaving(false);
@@ -158,84 +199,170 @@ export function ContactForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-900 border-slate-700 text-slate-200 sm:max-w-md">
+      <DialogContent className="bg-card border-border text-foreground sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-white">
-            {isEdit ? 'Edit Contact' : 'Add Contact'}
+          <DialogTitle className="text-foreground">
+            {isEdit ? 'Edit Customer' : 'Add Customer'}
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-muted-foreground">
             {isEdit
-              ? 'Update the contact details below.'
-              : 'Fill in the details to create a new contact.'}
+              ? 'Update the customer details below.'
+              : 'Fill in the details to create a new customer.'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cf-name" className="text-slate-300">
-              Name
-            </Label>
-            <Input
-              id="cf-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
-              className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-            />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Section 1 — Customer Info */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Customer Info</h3>
+            <div className="space-y-2">
+              <Label htmlFor="cf-name">Name</Label>
+              <Input
+                id="cf-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cf-phone">Phone <span className="text-destructive">*</span></Label>
+              <Input
+                id="cf-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+971 50 123 4567"
+              />
+              <p className="text-xs text-muted-foreground">Include country code, e.g. +971 for UAE</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cf-email">Email</Label>
+              <Input
+                id="cf-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="john@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cf-company">Company / Fleet</Label>
+              <Input
+                id="cf-company"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                placeholder="Acme Fleet Ltd."
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cf-phone" className="text-slate-300">
-              Phone <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              id="cf-phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 234 567 8900"
-              className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-            />
-            <p className="text-xs text-slate-500">
-              Include country code, e.g. +1 for US
-            </p>
+          {/* Section 2 — Vehicle Details */}
+          <div className="space-y-3 border-t border-border pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vehicle Details</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="cf-car-brand">Car Brand</Label>
+                <Input
+                  id="cf-car-brand"
+                  value={carBrand}
+                  onChange={(e) => setCarBrand(e.target.value)}
+                  placeholder="e.g. Toyota, BMW"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cf-car-model">Car Model</Label>
+                <Input
+                  id="cf-car-model"
+                  value={carModel}
+                  onChange={(e) => setCarModel(e.target.value)}
+                  placeholder="e.g. Camry, X5"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="cf-car-year">Year</Label>
+                <Input
+                  id="cf-car-year"
+                  type="number"
+                  min={1900}
+                  max={2030}
+                  value={carYear}
+                  onChange={(e) => setCarYear(e.target.value)}
+                  placeholder="2022"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cf-car-trim">Trim / Variant</Label>
+                <Input
+                  id="cf-car-trim"
+                  value={carTrim}
+                  onChange={(e) => setCarTrim(e.target.value)}
+                  placeholder="e.g. Sport, M-Sport"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="cf-vin">VIN / Chassis No.</Label>
+                <Input
+                  id="cf-vin"
+                  value={vin}
+                  onChange={(e) => setVin(e.target.value)}
+                  placeholder="1HGBH41JXMN109186"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cf-plate">Plate Number</Label>
+                <Input
+                  id="cf-plate"
+                  value={plateNumber}
+                  onChange={(e) => setPlateNumber(e.target.value)}
+                  placeholder="DXB A 12345"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cf-email" className="text-slate-300">
-              Email
-            </Label>
-            <Input
-              id="cf-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="john@example.com"
-              className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-            />
+          {/* Section 3 — Service */}
+          <div className="space-y-3 border-t border-border pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Service</h3>
+            <div className="space-y-2">
+              <Label htmlFor="cf-service-type">Service Type</Label>
+              <select
+                id="cf-service-type"
+                value={serviceType}
+                onChange={(e) => setServiceType(e.target.value)}
+                className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              >
+                <option value="">Select service type…</option>
+                {SERVICE_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cf-job-desc">Job Description</Label>
+              <textarea
+                id="cf-job-desc"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Describe the job in detail…"
+                rows={3}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cf-company" className="text-slate-300">
-              Company
-            </Label>
-            <Input
-              id="cf-company"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder="Acme Inc."
-              className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-slate-300">Tags</Label>
+          {/* Section 4 — Tags */}
+          <div className="space-y-3 border-t border-border pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tags</h3>
             {loadingTags ? (
-              <div className="flex items-center gap-2 text-slate-500 text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Loader2 className="size-3 animate-spin" />
                 Loading tags...
               </div>
             ) : tags.length === 0 ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 No tags available. Create tags in Settings.
               </p>
             ) : (
@@ -249,7 +376,7 @@ export function ContactForm({
                       onClick={() => toggleTag(tag.id)}
                       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors cursor-pointer ${
                         selected
-                          ? 'ring-2 ring-primary ring-offset-1 ring-offset-slate-900'
+                          ? 'ring-2 ring-primary ring-offset-1 ring-offset-background'
                           : 'opacity-60 hover:opacity-100'
                       }`}
                       style={{
@@ -266,12 +393,11 @@ export function ContactForm({
             )}
           </div>
 
-          <DialogFooter className="bg-slate-900 border-slate-700">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
             >
               Cancel
             </Button>

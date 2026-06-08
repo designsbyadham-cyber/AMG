@@ -94,6 +94,14 @@ export interface Contact {
   email?: string;
   company?: string;
   avatar_url?: string;
+  car_brand?: string | null;
+  car_model?: string | null;
+  car_year?: number | null;
+  car_trim?: string | null;
+  vin?: string | null;
+  plate_number?: string | null;
+  service_type?: string | null;
+  job_description?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -304,6 +312,7 @@ export interface Deal {
   notes?: string;
   expected_close_date?: string;
   status?: DealStatus;
+  collected_at?: string | null;
   created_at: string;
   updated_at?: string;
   contact?: Contact;
