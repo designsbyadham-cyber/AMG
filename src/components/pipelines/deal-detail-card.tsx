@@ -67,6 +67,7 @@ export function DealDetailCard({
   const vehicleLine = [vehicleParts, c?.plate_number].filter(Boolean).join(' · ');
 
   async function handleSave() {
+    if (!deal) return;
     setSaving(true);
     const { error } = await supabase
       .from('deals')
