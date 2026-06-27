@@ -21,9 +21,8 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
-  icons: {
-    icon: [{ url: "/icon" }],
-  },
+  // Browser favicon + Apple touch icon are provided by the file
+  // conventions src/app/icon.svg and src/app/apple-icon.png.
   formatDetection: {
     email: false,
     address: false,

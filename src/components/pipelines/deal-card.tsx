@@ -77,10 +77,10 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
           if (!isOverlay) onEdit(deal);
         }
       }}
-      className={`group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-white pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
+      className={`group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-card pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
         isOverlay
           ? "shadow-xl"
-          : "hover:-translate-y-0.5 hover:border-border hover:bg-white hover:shadow-lg"
+          : "hover:-translate-y-0.5 hover:border-border hover:bg-card hover:shadow-lg"
       }`}
     >
       {/* Stage colour accent bar — clipped to the card's rounded corners
