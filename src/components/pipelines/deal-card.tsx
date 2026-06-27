@@ -77,16 +77,17 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
           if (!isOverlay) onEdit(deal);
         }
       }}
-      className={`group relative w-full cursor-pointer rounded-xl border border-border/50 bg-white pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
+      className={`group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-white pl-4 pr-3 py-3 text-left shadow-sm transition-all ${
         isOverlay
           ? "shadow-xl"
           : "hover:-translate-y-0.5 hover:border-border hover:bg-white hover:shadow-lg"
       }`}
     >
-      {/* Stage colour accent bar */}
+      {/* Stage colour accent bar — clipped to the card's rounded corners
+          by overflow-hidden on the parent, so it follows the curve. */}
       <span
         aria-hidden
-        className="absolute left-0 top-0 h-full w-1 rounded-l-xl"
+        className="absolute inset-y-0 left-0 w-1"
         style={{ backgroundColor: stage?.color ?? "#94a3b8" }}
       />
 
