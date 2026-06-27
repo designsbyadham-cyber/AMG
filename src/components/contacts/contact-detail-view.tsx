@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal } from '@/types';
+import { SERVICE_TYPE_COLORS, getServiceTypes } from '@/lib/services';
 import {
   Sheet,
   SheetContent,
@@ -472,7 +473,7 @@ export function ContactDetailView({
                   {/* Vehicle & Service — read-only; edit via the Edit modal */}
                   {(contact.car_brand || contact.car_model || contact.car_year ||
                     contact.car_trim || contact.vin || contact.plate_number ||
-                    contact.service_type || contact.job_description) && (
+                    getServiceTypes(contact).length > 0 || contact.job_description) && (
                     <div className="border-t border-border pt-3 space-y-2">
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vehicle & Service</p>
                       {(contact.car_brand || contact.car_model || contact.car_year) && (
@@ -501,10 +502,19 @@ export function ContactDetailView({
                           <span className="text-foreground font-mono text-xs">{contact.vin}</span>
                         </div>
                       )}
-                      {contact.service_type && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Service</span>
-                          <span className="text-foreground">{contact.service_type}</span>
+                      {getServiceTypes(contact).length > 0 && (
+                        <div className="flex justify-between gap-3 text-sm">
+                          <span className="shrink-0 text-muted-foreground">Service</span>
+                          <span className="flex flex-wrap justify-end gap-1">
+                            {getServiceTypes(contact).map((s) => (
+                              <span
+                                key={s}
+                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SERVICE_TYPE_COLORS[s] ?? 'bg-muted text-muted-foreground'}`}
+                              >
+                                {s}
+                              </span>
+                            ))}
+                          </span>
                         </div>
                       )}
                       {contact.job_description && (

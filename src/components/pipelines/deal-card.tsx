@@ -1,6 +1,7 @@
 "use client";
 
 import type { Deal, PipelineStage } from "@/types";
+import { SERVICE_TYPE_COLORS, getServiceTypes } from "@/lib/services";
 import { AlertTriangle, Calendar, Check, X } from "lucide-react";
 
 interface DealCardProps {
@@ -65,6 +66,7 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
   const contactDisplay = contactName || contactPhone || "No contact";
 
   const assigneeLabel = deal.assignee?.full_name || null;
+  const services = getServiceTypes(c);
 
   return (
     <div
@@ -132,6 +134,20 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
           )}
         </span>
       </div>
+
+      {/* Service chips — selected optional services */}
+      {services.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {services.map((s) => (
+            <span
+              key={s}
+              className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${SERVICE_TYPE_COLORS[s] ?? "bg-muted text-muted-foreground"}`}
+            >
+              {s}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Line 4 — Value + date + assignee */}
       <div className="mt-2 flex items-center justify-between gap-2">

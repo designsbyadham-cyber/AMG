@@ -101,6 +101,10 @@ export interface Contact {
   vin?: string | null;
   plate_number?: string | null;
   service_type?: string | null;
+  /** Multi-select services (024). Falls back to `service_type` for
+   *  records saved before the migration — use `getServiceTypes` from
+   *  `@/lib/services` to read either shape. */
+  service_types?: string[] | null;
   job_description?: string | null;
   opt_in_status?: string | null;
   opt_in_recorded_at?: string | null;

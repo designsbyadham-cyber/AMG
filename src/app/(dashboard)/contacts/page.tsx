@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag } from '@/types';
+import { SERVICE_TYPE_COLORS, getServiceTypes } from '@/lib/services';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -48,13 +49,6 @@ import { useCan } from '@/hooks/use-can';
 import { GatedButton } from '@/components/ui/gated-button';
 
 const PAGE_SIZE = 25;
-
-const SERVICE_TYPE_COLORS: Record<string, string> = {
-  'Interior Upgrades': 'bg-purple-500/10 text-purple-600',
-  'Exterior Upgrades': 'bg-blue-500/10 text-blue-600',
-  'Detailing & Protection': 'bg-emerald-500/10 text-emerald-600',
-  'Tinting': 'bg-amber-500/10 text-amber-600',
-};
 
 interface ContactWithTags extends Contact {
   tags?: Tag[];
@@ -308,9 +302,7 @@ export default function ContactsPage() {
                 const vehicleLabel = [contact.car_brand, contact.car_model]
                   .filter(Boolean)
                   .join(' ') || null;
-                const serviceColor = contact.service_type
-                  ? (SERVICE_TYPE_COLORS[contact.service_type] ?? 'bg-muted text-muted-foreground')
-                  : null;
+                const services = getServiceTypes(contact);
 
                 return (
                   <TableRow
@@ -335,10 +327,17 @@ export default function ContactsPage() {
                       {contact.plate_number || <span className="text-muted-foreground/40">—</span>}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      {serviceColor && contact.service_type ? (
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${serviceColor}`}>
-                          {contact.service_type}
-                        </span>
+                      {services.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {services.map((s) => (
+                            <span
+                              key={s}
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SERVICE_TYPE_COLORS[s] ?? 'bg-muted text-muted-foreground'}`}
+                            >
+                              {s}
+                            </span>
+                          ))}
+                        </div>
                       ) : (
                         <span className="text-muted-foreground/40 text-xs">—</span>
                       )}

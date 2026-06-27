@@ -18,12 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 
-const SERVICE_TYPES = [
-  'Interior Upgrades',
-  'Exterior Upgrades',
-  'Detailing & Protection',
-  'Tinting',
-] as const;
+import { SERVICE_TYPES, getServiceTypes } from '@/lib/services';
 
 interface ContactFormProps {
   open: boolean;
@@ -58,9 +53,17 @@ export function ContactForm({
   const [vin, setVin] = useState('');
   const [plateNumber, setPlateNumber] = useState('');
 
-  // Service
-  const [serviceType, setServiceType] = useState('');
+  // Service (multi-select: "select all that apply")
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
   const [jobDescription, setJobDescription] = useState('');
+
+  function toggleService(service: string) {
+    setServiceTypes((prev) =>
+      prev.includes(service)
+        ? prev.filter((s) => s !== service)
+        : [...prev, service]
+    );
+  }
 
   const [saving, setSaving] = useState(false);
 
@@ -80,7 +83,7 @@ export function ContactForm({
       setCarTrim(contact?.car_trim ?? '');
       setVin(contact?.vin ?? '');
       setPlateNumber(contact?.plate_number ?? '');
-      setServiceType(contact?.service_type ?? '');
+      setServiceTypes(getServiceTypes(contact));
       setJobDescription(contact?.job_description ?? '');
       setSelectedTagIds(contactTags.map((ct) => ct.tag_id));
       fetchTags();
@@ -130,7 +133,10 @@ export function ContactForm({
         car_trim: carTrim.trim() || null,
         vin: vin.trim() || null,
         plate_number: plateNumber.trim() || null,
-        service_type: serviceType || null,
+        service_types: serviceTypes.length ? serviceTypes : null,
+        // Keep the legacy single column in sync (first selection) so any
+        // reader that still references service_type keeps working.
+        service_type: serviceTypes[0] ?? null,
         job_description: jobDescription.trim() || null,
       };
 
@@ -327,18 +333,31 @@ export function ContactForm({
           <div className="space-y-3 border-t border-border pt-4">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Service</h3>
             <div className="space-y-2">
-              <Label htmlFor="cf-service-type">Service Type</Label>
-              <select
-                id="cf-service-type"
-                value={serviceType}
-                onChange={(e) => setServiceType(e.target.value)}
-                className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Select service type…</option>
-                {SERVICE_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+              <Label>Service Type</Label>
+              <p className="text-xs text-muted-foreground">Select all that apply</p>
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                {SERVICE_TYPES.map((t) => {
+                  const checked = serviceTypes.includes(t);
+                  return (
+                    <label
+                      key={t}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        checked
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-input bg-background text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleService(t)}
+                        className="size-4 rounded border-input text-primary focus:ring-primary"
+                      />
+                      {t}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="cf-job-desc">Job Description</Label>
