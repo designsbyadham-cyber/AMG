@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag } from '@/types';
 import { SERVICE_TYPE_COLORS, getServiceTypes } from '@/lib/services';
+import { LEAD_STATUS_META } from '@/lib/lead-status';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -311,7 +312,18 @@ export default function ContactsPage() {
                     onClick={() => openDetail(contact.id)}
                   >
                     <TableCell className="text-foreground font-medium">
-                      {contact.name || <span className="text-muted-foreground italic">Unnamed</span>}
+                      <div className="flex items-center gap-2">
+                        <span>
+                          {contact.name || <span className="text-muted-foreground italic">Unnamed</span>}
+                        </span>
+                        {contact.lead_status && (
+                          <span
+                            className={`shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${LEAD_STATUS_META[contact.lead_status].badge}`}
+                          >
+                            {LEAD_STATUS_META[contact.lead_status].label}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground font-mono text-xs">
                       {contact.phone}

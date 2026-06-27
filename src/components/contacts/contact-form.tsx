@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 
 import { SERVICE_TYPES, getServiceTypes } from '@/lib/services';
+import { LEAD_STATUSES, LEAD_STATUS_META, type LeadStatus } from '@/lib/lead-status';
 
 interface ContactFormProps {
   open: boolean;
@@ -44,6 +45,7 @@ export function ContactForm({
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
+  const [leadStatus, setLeadStatus] = useState<LeadStatus | null>(null);
 
   // Vehicle Details
   const [carBrand, setCarBrand] = useState('');
@@ -77,6 +79,7 @@ export function ContactForm({
       setPhone(contact?.phone ?? '');
       setEmail(contact?.email ?? '');
       setCompany(contact?.company ?? '');
+      setLeadStatus(contact?.lead_status ?? null);
       setCarBrand(contact?.car_brand ?? '');
       setCarModel(contact?.car_model ?? '');
       setCarYear(contact?.car_year != null ? String(contact.car_year) : '');
@@ -138,6 +141,7 @@ export function ContactForm({
         // reader that still references service_type keeps working.
         service_type: serviceTypes[0] ?? null,
         job_description: jobDescription.trim() || null,
+        lead_status: leadStatus,
       };
 
       let contactId = contact?.id;
@@ -258,6 +262,29 @@ export function ContactForm({
                 onChange={(e) => setCompany(e.target.value)}
                 placeholder="Acme Fleet Ltd."
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Lead Status</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {LEAD_STATUSES.map((s) => {
+                  const active = leadStatus === s;
+                  const meta = LEAD_STATUS_META[s];
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setLeadStatus(active ? null : s)}
+                      className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                        active
+                          ? meta.active
+                          : 'border-input bg-background text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {meta.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

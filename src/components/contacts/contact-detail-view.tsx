@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal } from '@/types';
-import { SERVICE_TYPE_COLORS, getServiceTypes } from '@/lib/services';
+import { SERVICE_TYPES, getServiceTypes } from '@/lib/services';
+import { LEAD_STATUSES, LEAD_STATUS_META, type LeadStatus } from '@/lib/lead-status';
 import {
   Sheet,
   SheetContent,
@@ -60,7 +61,25 @@ export function ContactDetailView({
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editCompany, setEditCompany] = useState('');
+  const [editLeadStatus, setEditLeadStatus] = useState<LeadStatus | null>(null);
+  // Vehicle & Service (editable inline — mirrors the Add Customer form)
+  const [editCarBrand, setEditCarBrand] = useState('');
+  const [editCarModel, setEditCarModel] = useState('');
+  const [editCarYear, setEditCarYear] = useState('');
+  const [editCarTrim, setEditCarTrim] = useState('');
+  const [editVin, setEditVin] = useState('');
+  const [editPlate, setEditPlate] = useState('');
+  const [editServiceTypes, setEditServiceTypes] = useState<string[]>([]);
+  const [editJobDescription, setEditJobDescription] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
+
+  function toggleEditService(service: string) {
+    setEditServiceTypes((prev) =>
+      prev.includes(service)
+        ? prev.filter((s) => s !== service)
+        : [...prev, service]
+    );
+  }
 
   // Tags tab
   const [allTags, setAllTags] = useState<Tag[]>([]);
@@ -99,6 +118,15 @@ export function ContactDetailView({
       setEditPhone(data.phone);
       setEditEmail(data.email ?? '');
       setEditCompany(data.company ?? '');
+      setEditLeadStatus(data.lead_status ?? null);
+      setEditCarBrand(data.car_brand ?? '');
+      setEditCarModel(data.car_model ?? '');
+      setEditCarYear(data.car_year != null ? String(data.car_year) : '');
+      setEditCarTrim(data.car_trim ?? '');
+      setEditVin(data.vin ?? '');
+      setEditPlate(data.plate_number ?? '');
+      setEditServiceTypes(getServiceTypes(data));
+      setEditJobDescription(data.job_description ?? '');
     }
     setLoading(false);
   }, [contactId, supabase]);
@@ -197,6 +225,17 @@ export function ContactDetailView({
         phone: editPhone.trim(),
         email: editEmail.trim() || null,
         company: editCompany.trim() || null,
+        lead_status: editLeadStatus,
+        car_brand: editCarBrand.trim() || null,
+        car_model: editCarModel.trim() || null,
+        car_year: editCarYear ? parseInt(editCarYear, 10) : null,
+        car_trim: editCarTrim.trim() || null,
+        vin: editVin.trim() || null,
+        plate_number: editPlate.trim() || null,
+        service_types: editServiceTypes.length ? editServiceTypes : null,
+        // Keep the legacy single column in sync (first selection).
+        service_type: editServiceTypes[0] ?? null,
+        job_description: editJobDescription.trim() || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', contactId);
@@ -348,9 +387,18 @@ export function ContactDetailView({
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <SheetTitle className="text-foreground truncate">
-                    {contact.name || 'Unknown'}
-                  </SheetTitle>
+                  <div className="flex items-center gap-2">
+                    <SheetTitle className="text-foreground truncate">
+                      {contact.name || 'Unknown'}
+                    </SheetTitle>
+                    {contact.lead_status && (
+                      <span
+                        className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${LEAD_STATUS_META[contact.lead_status].badge}`}
+                      >
+                        {LEAD_STATUS_META[contact.lead_status].label}
+                      </span>
+                    )}
+                  </div>
                   <SheetDescription className="text-muted-foreground text-xs mt-0.5">
                     Contact details
                   </SheetDescription>
@@ -456,6 +504,135 @@ export function ContactDetailView({
                       className="bg-muted border-border text-foreground h-8 text-sm"
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-muted-foreground text-xs">Lead Status</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {LEAD_STATUSES.map((s) => {
+                        const active = editLeadStatus === s;
+                        const meta = LEAD_STATUS_META[s];
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setEditLeadStatus(active ? null : s)}
+                            className={`rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
+                              active
+                                ? meta.active
+                                : 'border-border bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            {meta.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Vehicle Details — editable inline */}
+                  <div className="border-t border-border pt-3 space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vehicle Details</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs">Car Brand</Label>
+                        <Input
+                          value={editCarBrand}
+                          onChange={(e) => setEditCarBrand(e.target.value)}
+                          placeholder="Toyota"
+                          className="bg-muted border-border text-foreground h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs">Car Model</Label>
+                        <Input
+                          value={editCarModel}
+                          onChange={(e) => setEditCarModel(e.target.value)}
+                          placeholder="Camry"
+                          className="bg-muted border-border text-foreground h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs">Year</Label>
+                        <Input
+                          type="number"
+                          min={1900}
+                          max={2030}
+                          value={editCarYear}
+                          onChange={(e) => setEditCarYear(e.target.value)}
+                          placeholder="2022"
+                          className="bg-muted border-border text-foreground h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs">Trim / Variant</Label>
+                        <Input
+                          value={editCarTrim}
+                          onChange={(e) => setEditCarTrim(e.target.value)}
+                          placeholder="Sport"
+                          className="bg-muted border-border text-foreground h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs">VIN / Chassis No.</Label>
+                        <Input
+                          value={editVin}
+                          onChange={(e) => setEditVin(e.target.value)}
+                          placeholder="1HGBH41JXMN109186"
+                          className="bg-muted border-border text-foreground h-8 text-sm font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs">Plate Number</Label>
+                        <Input
+                          value={editPlate}
+                          onChange={(e) => setEditPlate(e.target.value)}
+                          placeholder="DXB A 12345"
+                          className="bg-muted border-border text-foreground h-8 text-sm font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Service — editable multi-select */}
+                  <div className="border-t border-border pt-3 space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Service</p>
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground text-xs">Service Type</Label>
+                      <p className="text-xs text-muted-foreground">Select all that apply</p>
+                      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                        {SERVICE_TYPES.map((t) => {
+                          const checked = editServiceTypes.includes(t);
+                          return (
+                            <label
+                              key={t}
+                              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                                checked
+                                  ? 'border-primary bg-primary/10 text-foreground'
+                                  : 'border-border bg-muted text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleEditService(t)}
+                                className="size-4 rounded border-input text-primary focus:ring-primary"
+                              />
+                              {t}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground text-xs">Job Description</Label>
+                      <Textarea
+                        value={editJobDescription}
+                        onChange={(e) => setEditJobDescription(e.target.value)}
+                        placeholder="Describe the job in detail…"
+                        className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px] text-sm resize-none"
+                      />
+                    </div>
+                  </div>
+
                   <Button
                     onClick={saveDetails}
                     disabled={savingDetails}
@@ -469,62 +646,6 @@ export function ContactDetailView({
                     )}
                     Save Changes
                   </Button>
-
-                  {/* Vehicle & Service — read-only; edit via the Edit modal */}
-                  {(contact.car_brand || contact.car_model || contact.car_year ||
-                    contact.car_trim || contact.vin || contact.plate_number ||
-                    getServiceTypes(contact).length > 0 || contact.job_description) && (
-                    <div className="border-t border-border pt-3 space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vehicle & Service</p>
-                      {(contact.car_brand || contact.car_model || contact.car_year) && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Vehicle</span>
-                          <span className="text-foreground font-medium text-right">
-                            {[contact.car_year, contact.car_brand, contact.car_model].filter(Boolean).join(' ')}
-                          </span>
-                        </div>
-                      )}
-                      {contact.car_trim && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Trim</span>
-                          <span className="text-foreground">{contact.car_trim}</span>
-                        </div>
-                      )}
-                      {contact.plate_number && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Plate</span>
-                          <span className="text-foreground font-mono">{contact.plate_number}</span>
-                        </div>
-                      )}
-                      {contact.vin && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">VIN</span>
-                          <span className="text-foreground font-mono text-xs">{contact.vin}</span>
-                        </div>
-                      )}
-                      {getServiceTypes(contact).length > 0 && (
-                        <div className="flex justify-between gap-3 text-sm">
-                          <span className="shrink-0 text-muted-foreground">Service</span>
-                          <span className="flex flex-wrap justify-end gap-1">
-                            {getServiceTypes(contact).map((s) => (
-                              <span
-                                key={s}
-                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SERVICE_TYPE_COLORS[s] ?? 'bg-muted text-muted-foreground'}`}
-                              >
-                                {s}
-                              </span>
-                            ))}
-                          </span>
-                        </div>
-                      )}
-                      {contact.job_description && (
-                        <div className="flex flex-col gap-1 text-sm">
-                          <span className="text-muted-foreground">Job Description</span>
-                          <span className="text-foreground text-xs leading-relaxed">{contact.job_description}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </TabsContent>
 

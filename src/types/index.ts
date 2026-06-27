@@ -106,6 +106,8 @@ export interface Contact {
    *  `@/lib/services` to read either shape. */
   service_types?: string[] | null;
   job_description?: string | null;
+  /** Lead temperature label (025): 'cold' | 'warm' | 'hot' | null. */
+  lead_status?: 'cold' | 'warm' | 'hot' | null;
   opt_in_status?: string | null;
   opt_in_recorded_at?: string | null;
   opt_in_source?: string | null;
