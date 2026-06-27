@@ -6,6 +6,7 @@ import type { Pipeline, PipelineStage, Deal } from "@/types";
 import { PipelineBoard } from "@/components/pipelines/pipeline-board";
 import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
 import { DealForm } from "@/components/pipelines/deal-form";
+import { DealDetailCard } from "@/components/pipelines/deal-detail-card";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,6 +69,10 @@ export default function PipelinesPage() {
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [defaultStageId, setDefaultStageId] = useState<string>("");
 
+  // Deal detail card — opened on card click; Edit button inside opens the form.
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [viewingDeal, setViewingDeal] = useState<Deal | null>(null);
+
   // Guard against double-seeding (React StrictMode double-effect in dev).
   const seedAttempted = useRef(false);
 
@@ -114,9 +119,16 @@ export default function PipelinesPage() {
     const user = session?.user;
     if (!user) return null;
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("account_id")
+      .eq("user_id", user.id)
+      .single();
+    if (!profile?.account_id) return null;
+
     const { data: pipeline, error } = await supabase
       .from("pipelines")
-      .insert({ user_id: user.id, name: "Service Jobs" })
+      .insert({ user_id: user.id, account_id: profile.account_id, name: "Service Jobs" })
       .select()
       .single();
 
@@ -291,6 +303,11 @@ export default function PipelinesPage() {
     setDealFormOpen(true);
   }, []);
 
+  const handleViewDeal = useCallback((deal: Deal) => {
+    setViewingDeal(deal);
+    setDetailOpen(true);
+  }, []);
+
   async function handleCreatePipeline() {
     const name = newPipelineName.trim();
     if (!name) return;
@@ -305,9 +322,20 @@ export default function PipelinesPage() {
       return;
     }
 
+    const { data: profileRow } = await supabase
+      .from("profiles")
+      .select("account_id")
+      .eq("user_id", user.id)
+      .single();
+    if (!profileRow?.account_id) {
+      toast.error("Account not configured");
+      setCreating(false);
+      return;
+    }
+
     const { data: pipeline, error } = await supabase
       .from("pipelines")
-      .insert({ user_id: user.id, name })
+      .insert({ user_id: user.id, account_id: profileRow.account_id, name })
       .select()
       .single();
 
@@ -448,7 +476,7 @@ export default function PipelinesPage() {
             deals={deals}
             onDealMoved={handleDealMoved}
             onAddDeal={handleAddDeal}
-            onEditDeal={handleEditDeal}
+            onEditDeal={handleViewDeal}
           />
         </>
       )}
@@ -507,6 +535,18 @@ export default function PipelinesPage() {
           }}
         />
       )}
+
+      {/* Deal Detail Card — opened on card click */}
+      <DealDetailCard
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        deal={viewingDeal}
+        onEdit={(deal) => {
+          setDetailOpen(false);
+          handleEditDeal(deal);
+        }}
+        onSaved={refreshDeals}
+      />
 
       {/* Deal Form (Sheet) */}
       <DealForm

@@ -102,6 +102,9 @@ export interface Contact {
   plate_number?: string | null;
   service_type?: string | null;
   job_description?: string | null;
+  opt_in_status?: string | null;
+  opt_in_recorded_at?: string | null;
+  opt_in_source?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -313,6 +316,10 @@ export interface Deal {
   expected_close_date?: string;
   status?: DealStatus;
   collected_at?: string | null;
+  start_date?: string | null;
+  delivery_date?: string | null;
+  deposit_percentage?: number | null;
+  deposit_paid?: boolean;
   created_at: string;
   updated_at?: string;
   contact?: Contact;

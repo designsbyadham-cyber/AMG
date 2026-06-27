@@ -62,6 +62,10 @@ export function DealForm({
   const [assignedTo, setAssignedTo] = useState("");
   const [expectedCloseDate, setExpectedCloseDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState("");
+  const [depositPct, setDepositPct] = useState("25");
+  const [depositPaid, setDepositPaid] = useState(false);
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -91,6 +95,10 @@ export function DealForm({
       setAssignedTo(deal.assigned_to ?? "");
       setExpectedCloseDate(deal.expected_close_date ?? "");
       setNotes(deal.notes ?? "");
+      setStartDate(deal.start_date ?? "");
+      setDeliveryDate(deal.delivery_date ?? "");
+      setDepositPct(String(deal.deposit_percentage ?? 25));
+      setDepositPaid(deal.deposit_paid ?? false);
     } else {
       setTitle("");
       setValue("");
@@ -100,6 +108,10 @@ export function DealForm({
       setAssignedTo("");
       setExpectedCloseDate("");
       setNotes("");
+      setStartDate("");
+      setDeliveryDate("");
+      setDepositPct("25");
+      setDepositPaid(false);
     }
   }, [open, deal, defaultStageId, stages]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -201,6 +213,10 @@ export function DealForm({
       assigned_to: assignedTo || null,
       notes: notes.trim() || null,
       expected_close_date: expectedCloseDate || null,
+      start_date: startDate || null,
+      delivery_date: deliveryDate || null,
+      deposit_percentage: parseFloat(depositPct) || 25,
+      deposit_paid: depositPaid,
     };
 
     if (movingToCollected) {
@@ -419,6 +435,73 @@ export function DealForm({
                 placeholder="Add notes..."
                 className="min-h-[100px]"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label>Start Date</Label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Delivery Date</Label>
+                <Input
+                  type="date"
+                  value={deliveryDate}
+                  onChange={(e) => setDeliveryDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Deposit
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <Label className="text-xs">Percentage</Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={depositPct}
+                      onChange={(e) => setDepositPct(e.target.value)}
+                      className="pr-7"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      %
+                    </span>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-xs">Amount</Label>
+                  <div className="h-9 rounded-lg border border-border/50 bg-background px-3 flex items-center text-sm text-muted-foreground">
+                    {parseFloat(value) && depositPct
+                      ? new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: currency || "USD",
+                          minimumFractionDigits: 0,
+                        }).format(
+                          (parseFloat(value) * (parseFloat(depositPct) || 0)) / 100,
+                        )
+                      : "—"}
+                  </div>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={depositPaid}
+                  onChange={(e) => setDepositPaid(e.target.checked)}
+                  className="rounded border-border text-primary focus:ring-primary"
+                />
+                <span className="text-sm text-foreground">Deposit paid</span>
+              </label>
             </div>
 
             {deal && (

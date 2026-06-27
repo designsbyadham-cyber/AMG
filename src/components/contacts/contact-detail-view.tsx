@@ -468,6 +468,53 @@ export function ContactDetailView({
                     )}
                     Save Changes
                   </Button>
+
+                  {/* Vehicle & Service — read-only; edit via the Edit modal */}
+                  {(contact.car_brand || contact.car_model || contact.car_year ||
+                    contact.car_trim || contact.vin || contact.plate_number ||
+                    contact.service_type || contact.job_description) && (
+                    <div className="border-t border-border pt-3 space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vehicle & Service</p>
+                      {(contact.car_brand || contact.car_model || contact.car_year) && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Vehicle</span>
+                          <span className="text-foreground font-medium text-right">
+                            {[contact.car_year, contact.car_brand, contact.car_model].filter(Boolean).join(' ')}
+                          </span>
+                        </div>
+                      )}
+                      {contact.car_trim && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Trim</span>
+                          <span className="text-foreground">{contact.car_trim}</span>
+                        </div>
+                      )}
+                      {contact.plate_number && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Plate</span>
+                          <span className="text-foreground font-mono">{contact.plate_number}</span>
+                        </div>
+                      )}
+                      {contact.vin && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">VIN</span>
+                          <span className="text-foreground font-mono text-xs">{contact.vin}</span>
+                        </div>
+                      )}
+                      {contact.service_type && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Service</span>
+                          <span className="text-foreground">{contact.service_type}</span>
+                        </div>
+                      )}
+                      {contact.job_description && (
+                        <div className="flex flex-col gap-1 text-sm">
+                          <span className="text-muted-foreground">Job Description</span>
+                          <span className="text-foreground text-xs leading-relaxed">{contact.job_description}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
