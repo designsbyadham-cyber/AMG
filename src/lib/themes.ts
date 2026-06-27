@@ -24,7 +24,11 @@ export const THEME_IDS = [
 
 export type ThemeId = (typeof THEME_IDS)[number];
 
-export const DEFAULT_THEME: ThemeId = "sunlight";
+// Dark violet is the brand default. The server, first paint, and any
+// visitor without a saved preference all use this, so the dark UI
+// (incl. bg-card job cards) renders correctly instead of flashing the
+// light "sunlight" theme (white cards) before the client settles.
+export const DEFAULT_THEME: ThemeId = "violet";
 
 export const STORAGE_KEY = "wacrm.theme";
 
