@@ -199,7 +199,7 @@ export function ContactForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border text-foreground sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-card border-border text-foreground overflow-y-auto max-h-[90vh] sm:max-w-lg max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:max-w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-h-[88vh] max-sm:rounded-b-none max-sm:rounded-t-2xl">
         <DialogHeader>
           <DialogTitle className="text-foreground">
             {isEdit ? 'Edit Customer' : 'Add Customer'}
@@ -393,7 +393,7 @@ export function ContactForm({
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="max-sm:sticky max-sm:bottom-0 max-sm:bg-card max-sm:py-3">
             <Button
               type="button"
               variant="outline"

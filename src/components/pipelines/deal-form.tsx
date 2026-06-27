@@ -308,7 +308,7 @@ export function DealForm({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-card border-border text-foreground sm:max-w-lg w-full p-0"
+        className="bg-card border-border text-foreground sm:max-w-lg w-full p-0 max-sm:!w-full"
       >
         <div className="flex h-full flex-col">
           <SheetHeader className="border-b border-border p-4">

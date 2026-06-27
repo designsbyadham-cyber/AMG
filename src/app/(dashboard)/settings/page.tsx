@@ -61,6 +61,11 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={tab} onValueChange={(v) => onChange(v as TabValue)}>
+        {/* Scroll wrapper keeps the tab bar from overflowing the viewport
+            on mobile. The list stays w-fit, so on desktop it fits without
+            scrolling and looks identical; on narrow screens it scrolls
+            horizontally with the scrollbar hidden. */}
+        <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <TabsList className="bg-card border border-border">
           <TabsTrigger
             value="profile"
@@ -105,6 +110,7 @@ export default function SettingsPage() {
             Members
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="profile" className="space-y-6">
           <ProfileForm />
