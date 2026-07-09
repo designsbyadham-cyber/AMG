@@ -108,6 +108,16 @@ export interface Contact {
   job_description?: string | null;
   /** Lead temperature label (025): 'cold' | 'warm' | 'hot' | null. */
   lead_status?: 'cold' | 'warm' | 'hot' | null;
+  /** Call Log bucket (026). Defaults to 'not_contacted' in the DB. */
+  contact_status?: 'not_contacted' | 'contacted' | 'follow_up';
+  /** Outcome of the most recent call attempt (026). */
+  last_call_outcome?: 'answered' | 'no_answer' | null;
+  /** When the contact was last reached / attempted (026). */
+  last_contacted_at?: string | null;
+  /** Whether a message has been sent to this contact (026). */
+  messaged?: boolean;
+  /** "Contact them by" / callback date (026). */
+  next_follow_up_at?: string | null;
   opt_in_status?: string | null;
   opt_in_recorded_at?: string | null;
   opt_in_source?: string | null;

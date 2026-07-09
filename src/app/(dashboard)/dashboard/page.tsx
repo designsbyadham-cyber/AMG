@@ -1,119 +1,88 @@
-"use client"
+'use client';
 
-import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import type { Contact, Deal } from '@/types';
+import { LEAD_STATUS_META } from '@/lib/lead-status';
+import { getContactStatus, relativeDay, daysAgo } from '@/lib/call-log';
+import { MetricCard } from '@/components/dashboard/metric-card';
+import { SkeletonCard } from '@/components/dashboard/skeleton';
 import {
-  MessageSquare,
-  Wrench,
-  CheckCircle2,
-  CalendarCheck,
-  ClipboardCheck,
-  ExternalLink,
-} from 'lucide-react'
+  Users,
+  PhoneOff,
+  CalendarClock,
+  PhoneCall,
+  Briefcase,
+  DollarSign,
+  Flame,
+  ArrowRight,
+  Clock,
+} from 'lucide-react';
 
-import {
-  loadActivity,
-  loadConversationsSeries,
-  loadMetrics,
-  loadPipelineDonut,
-  loadQualityCheckDue,
-  loadResponseTime,
-} from '@/lib/dashboard/queries'
-import type {
-  ActivityItem,
-  ConversationsSeriesPoint,
-  MetricsBundle,
-  PipelineDonutData,
-  QualityCheckDueItem,
-  ResponseTimeSummary,
-} from '@/lib/dashboard/types'
+type DashDeal = Pick<Deal, 'id' | 'value' | 'status'>;
 
-import { MetricCard } from '@/components/dashboard/metric-card'
-import { SkeletonCard } from '@/components/dashboard/skeleton'
-import { QuickActions } from '@/components/dashboard/quick-actions'
-import { ConversationsChart } from '@/components/dashboard/conversations-chart'
-import { PipelineDonut } from '@/components/dashboard/pipeline-donut'
-import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
-import { ActivityFeed } from '@/components/dashboard/activity-feed'
-
-type RangeDays = 7 | 30 | 90
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value || 0);
+}
 
 export default function DashboardPage() {
-  const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
-  const [metricsLoading, setMetricsLoading] = useState(true)
+  const [contacts, setContacts] = useState<Contact[] | null>(null);
+  const [deals, setDeals] = useState<DashDeal[] | null>(null);
 
-  const [qcDue, setQcDue] = useState<QualityCheckDueItem[] | null>(null)
-  const [qcLoading, setQcLoading] = useState(true)
-
-  const [range, setRange] = useState<RangeDays>(30)
-  const [series, setSeries] = useState<Record<RangeDays, ConversationsSeriesPoint[] | null>>({
-    7: null,
-    30: null,
-    90: null,
-  })
-  const [seriesLoading, setSeriesLoading] = useState(true)
-
-  const [pipeline, setPipeline] = useState<PipelineDonutData | null>(null)
-  const [pipelineLoading, setPipelineLoading] = useState(true)
-
-  const [responseTime, setResponseTime] = useState<ResponseTimeSummary | null>(null)
-  const [responseTimeLoading, setResponseTimeLoading] = useState(true)
-
-  const [activity, setActivity] = useState<ActivityItem[] | null>(null)
-  const [activityLoading, setActivityLoading] = useState(true)
-
-  const loadAll = useCallback(() => {
-    const db = createClient()
-
-    void loadMetrics(db)
-      .then((m) => setMetrics(m))
-      .catch((err) => console.error('[dashboard] metrics failed:', err))
-      .finally(() => setMetricsLoading(false))
-
-    void loadQualityCheckDue(db)
-      .then((q) => setQcDue(q))
-      .catch((err) => console.error('[dashboard] qc failed:', err))
-      .finally(() => setQcLoading(false))
-
-    void loadConversationsSeries(db, 30)
-      .then((s) => setSeries((prev) => ({ ...prev, 30: s })))
-      .catch((err) => console.error('[dashboard] series failed:', err))
-      .finally(() => setSeriesLoading(false))
-
-    void loadPipelineDonut(db)
-      .then((p) => setPipeline(p))
-      .catch((err) => console.error('[dashboard] pipeline failed:', err))
-      .finally(() => setPipelineLoading(false))
-
-    void loadResponseTime(db)
-      .then((r) => setResponseTime(r))
-      .catch((err) => console.error('[dashboard] response time failed:', err))
-      .finally(() => setResponseTimeLoading(false))
-
-    void loadActivity(db, 50)
-      .then((a) => setActivity(a))
-      .catch((err) => console.error('[dashboard] activity failed:', err))
-      .finally(() => setActivityLoading(false))
-  }, [])
+  const load = useCallback(async () => {
+    const db = createClient();
+    const [contactsRes, dealsRes] = await Promise.all([
+      db.from('contacts').select('*').order('created_at', { ascending: true }),
+      db.from('deals').select('id, value, status'),
+    ]);
+    setContacts((contactsRes.data ?? []) as Contact[]);
+    setDeals((dealsRes.data ?? []) as DashDeal[]);
+  }, []);
 
   useEffect(() => {
-    loadAll()
-  }, [loadAll])
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
-  const handleRangeChange = useCallback(
-    (r: RangeDays) => {
-      setRange(r)
-      if (series[r] !== null) return
-      setSeriesLoading(true)
-      const db = createClient()
-      loadConversationsSeries(db, r)
-        .then((s) => setSeries((prev) => ({ ...prev, [r]: s })))
-        .catch((err) => console.error('[dashboard] series failed:', err))
-        .finally(() => setSeriesLoading(false))
-    },
-    [series],
-  )
+  const stats = useMemo(() => {
+    if (!contacts || !deals) return null;
+    const byStatus = { not_contacted: 0, follow_up: 0, contacted: 0 };
+    const leads = { hot: 0, warm: 0, cold: 0 };
+    for (const c of contacts) {
+      byStatus[getContactStatus(c)]++;
+      if (c.lead_status) leads[c.lead_status]++;
+    }
+    const openDeals = deals.filter((d) => d.status !== 'won' && d.status !== 'lost');
+    const pipelineValue = openDeals.reduce((sum, d) => sum + Number(d.value || 0), 0);
+
+    const followUps = contacts
+      .filter((c) => getContactStatus(c) === 'follow_up')
+      .sort((a, b) =>
+        (a.next_follow_up_at ?? '9999-12-31').localeCompare(b.next_follow_up_at ?? '9999-12-31'),
+      )
+      .slice(0, 6);
+    const toContact = contacts
+      .filter((c) => getContactStatus(c) === 'not_contacted')
+      .slice(0, 6);
+
+    return {
+      total: contacts.length,
+      byStatus,
+      leads,
+      openJobs: openDeals.length,
+      pipelineValue,
+      followUps,
+      toContact,
+    };
+  }, [contacts, deals]);
+
+  const loading = stats === null;
 
   return (
     <div className="space-y-5">
@@ -121,122 +90,189 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Live overview of AMG Operations — messages, jobs, and quality checks.
+          Live snapshot of AMG Operations.
         </p>
       </div>
 
-      {/* AMG Metric cards */}
+      {/* Primary metrics — customers + call buckets */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metricsLoading || !metrics ? (
+        {loading ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <MetricCard
-              title="Unanswered Messages"
-              value={metrics.unansweredMessages.toLocaleString()}
-              icon={MessageSquare}
-              subtitle="Open conversations with unread messages"
-            />
-            <MetricCard
-              title="Jobs Booked Today"
-              value={metrics.jobsBookedToday.toLocaleString()}
-              icon={CalendarCheck}
-              subtitle="New service jobs created today"
-            />
-            <MetricCard
-              title="In Workshop"
-              value={metrics.inWorkshop.toLocaleString()}
-              icon={Wrench}
-              subtitle="Jobs currently in progress"
-            />
-            <MetricCard
-              title="Cars Ready"
-              value={metrics.carsReady.toLocaleString()}
-              icon={CheckCircle2}
-              subtitle="Completed jobs awaiting collection"
-            />
+            <Link href="/contacts" className="block">
+              <MetricCard
+                title="Total Customers"
+                value={stats.total.toLocaleString()}
+                icon={Users}
+                subtitle="Everyone in your list"
+              />
+            </Link>
+            <Link href="/call-log" className="block">
+              <MetricCard
+                title="To Contact"
+                value={stats.byStatus.not_contacted.toLocaleString()}
+                icon={PhoneOff}
+                subtitle="Not reached out yet"
+              />
+            </Link>
+            <Link href="/call-log" className="block">
+              <MetricCard
+                title="Follow-ups"
+                value={stats.byStatus.follow_up.toLocaleString()}
+                icon={CalendarClock}
+                subtitle="Awaiting a callback"
+              />
+            </Link>
+            <Link href="/call-log" className="block">
+              <MetricCard
+                title="Contacted"
+                value={stats.byStatus.contacted.toLocaleString()}
+                icon={PhoneCall}
+                subtitle="Reached by call or message"
+              />
+            </Link>
           </>
         )}
       </div>
 
-      {/* Quality Check Due section */}
-      <div className="rounded-xl border border-border bg-card">
-        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
-          <ClipboardCheck className="size-4 text-amber-500" />
-          <h2 className="text-sm font-semibold text-foreground">
-            Quality Check Due
-          </h2>
-          <span className="ml-auto text-xs text-muted-foreground">10 days post-collection</span>
-        </div>
-
-        {qcLoading ? (
-          <div className="flex items-center justify-center py-10">
-            <div className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        ) : !qcDue || qcDue.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-10">
-            <CheckCircle2 className="size-8 text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">No quality checks due today.</p>
-          </div>
+      {/* Secondary metrics — jobs + leads */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
-          <div className="divide-y divide-border">
-            {qcDue.map((item) => {
-              const vehicle = [item.carBrand, item.carModel].filter(Boolean).join(' ') || null
-              const daysAgo = Math.floor(
-                (Date.now() - new Date(item.collectedAt).getTime()) / (1000 * 60 * 60 * 24),
-              )
-              return (
-                <div key={item.dealId} className="flex items-center gap-4 px-5 py-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {item.contactName || item.contactPhone || 'Unknown customer'}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {[vehicle, item.plateNumber].filter(Boolean).join(' · ') || 'No vehicle info'}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-xs text-muted-foreground">Collected {daysAgo}d ago</p>
-                  </div>
-                  {item.conversationId && (
-                    <Link
-                      href={`/inbox?c=${item.conversationId}`}
-                      className="shrink-0 inline-flex items-center gap-1 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
-                    >
-                      <ExternalLink className="size-3" />
-                      Message
-                    </Link>
-                  )}
+          <>
+            <Link href="/pipelines" className="block">
+              <MetricCard
+                title="Open Jobs"
+                value={stats.openJobs.toLocaleString()}
+                icon={Briefcase}
+                subtitle="Active in the pipeline"
+              />
+            </Link>
+            <Link href="/pipelines" className="block">
+              <MetricCard
+                title="Pipeline Value"
+                value={formatCurrency(stats.pipelineValue)}
+                icon={DollarSign}
+                subtitle="Open job value"
+              />
+            </Link>
+            {/* Leads breakdown */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="flex items-start justify-between">
+                <p className="text-sm font-medium text-muted-foreground">Leads</p>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <Flame className="h-4 w-4" />
                 </div>
-              )
-            })}
-          </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                {(['hot', 'warm', 'cold'] as const).map((k) => (
+                  <div
+                    key={k}
+                    className={`flex-1 rounded-lg px-2 py-2 text-center ${LEAD_STATUS_META[k].badge}`}
+                  >
+                    <p className="text-lg font-bold tabular-nums leading-none">
+                      {stats.leads[k]}
+                    </p>
+                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide">
+                      {LEAD_STATUS_META[k].label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
         )}
       </div>
 
-      {/* Quick actions */}
-      <QuickActions />
-
-      {/* Charts row */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <div className="h-full lg:col-span-3">
-          <ConversationsChart
-            series={series}
-            loading={seriesLoading}
-            range={range}
-            onRangeChange={handleRangeChange}
+      {/* Actionable lists — follow-ups due + next to contact */}
+      {!loading && (stats.followUps.length > 0 || stats.toContact.length > 0) && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <AttentionList
+            title="Follow-ups due"
+            icon={<CalendarClock className="size-4 text-blue-500" />}
+            empty="No follow-ups scheduled."
+            rows={stats.followUps.map((c) => ({
+              id: c.id,
+              primary: c.name || c.phone,
+              secondary: [c.car_brand, c.car_model].filter(Boolean).join(' ') || c.phone,
+              meta: c.next_follow_up_at ? relativeDay(c.next_follow_up_at) : null,
+            }))}
+          />
+          <AttentionList
+            title="Next to contact"
+            icon={<Clock className="size-4 text-amber-500" />}
+            empty="Everyone has been reached."
+            rows={stats.toContact.map((c) => ({
+              id: c.id,
+              primary: c.name || c.phone,
+              secondary: [c.car_brand, c.car_model].filter(Boolean).join(' ') || c.phone,
+              meta: { label: `Added ${daysAgo(c.created_at)}`, overdue: false },
+            }))}
           />
         </div>
-        <div className="h-full lg:col-span-2">
-          <PipelineDonut data={pipeline} loading={pipelineLoading} />
-        </div>
-      </div>
-
-      {/* Response time */}
-      <ResponseTimeChart data={responseTime} loading={responseTimeLoading} />
-
-      {/* Activity feed */}
-      <ActivityFeed items={activity} loading={activityLoading} />
+      )}
     </div>
-  )
+  );
+}
+
+interface AttentionRow {
+  id: string;
+  primary: string;
+  secondary: string;
+  meta: { label: string; overdue: boolean } | null;
+}
+
+function AttentionList({
+  title,
+  icon,
+  empty,
+  rows,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  empty: string;
+  rows: AttentionRow[];
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
+        {icon}
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        <Link
+          href="/call-log"
+          className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+        >
+          Call Log
+          <ArrowRight className="size-3" />
+        </Link>
+      </div>
+      {rows.length === 0 ? (
+        <p className="px-5 py-8 text-center text-sm text-muted-foreground">{empty}</p>
+      ) : (
+        <div className="divide-y divide-border">
+          {rows.map((r) => (
+            <Link
+              key={r.id}
+              href="/call-log"
+              className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/40"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">{r.primary}</p>
+                <p className="truncate text-xs text-muted-foreground">{r.secondary}</p>
+              </div>
+              {r.meta && (
+                <span
+                  className={`shrink-0 text-xs font-medium ${r.meta.overdue ? 'text-red-400' : 'text-muted-foreground'}`}
+                >
+                  {r.meta.label}
+                </span>
+              )}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
