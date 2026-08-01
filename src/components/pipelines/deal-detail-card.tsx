@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Phone, Car, Wrench, Calendar, CheckCircle2, Circle } from 'lucide-react';
+import { Loader2, Phone, Car, Gauge, Wrench, Calendar, CheckCircle2, Circle } from 'lucide-react';
 import { toast } from 'sonner';
 
 function formatCurrency(value: number, currency?: string) {
@@ -49,6 +49,8 @@ export function DealDetailCard({
   const [deliveryDate, setDeliveryDate] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Sync local editable fields from the deal each time the modal opens.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open || !deal) return;
     setDepositPct(String(deal.deposit_percentage ?? 25));
@@ -56,6 +58,7 @@ export function DealDetailCard({
     setStartDate(deal.start_date ?? '');
     setDeliveryDate(deal.delivery_date ?? '');
   }, [open, deal]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!deal) return null;
 
@@ -112,6 +115,12 @@ export function DealDetailCard({
                   {vehicleLine}
                 </p>
               )}
+              {deal.odometer != null && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Gauge className="size-3 shrink-0" />
+                  {deal.odometer.toLocaleString()} km
+                </p>
+              )}
               {getServiceTypes(c).length > 0 && (
                 <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
                   <Wrench className="size-3 shrink-0 mt-0.5" />
@@ -132,6 +141,24 @@ export function DealDetailCard({
                   {c.job_description}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Job photos */}
+          {deal.image_urls && deal.image_urls.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {deal.image_urls.map((url, i) => (
+                <a
+                  key={url}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="aspect-square overflow-hidden rounded-lg border border-border bg-muted"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`Job photo ${i + 1}`} className="h-full w-full object-cover" />
+                </a>
+              ))}
             </div>
           )}
 

@@ -336,6 +336,10 @@ export interface Deal {
   delivery_date?: string | null;
   deposit_percentage?: number | null;
   deposit_paid?: boolean;
+  /** Vehicle mileage captured at intake (027). */
+  odometer?: number | null;
+  /** Attached job photo URLs in the public `job-photos` bucket (027). */
+  image_urls?: string[] | null;
   created_at: string;
   updated_at?: string;
   contact?: Contact;
