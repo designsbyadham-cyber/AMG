@@ -22,6 +22,8 @@ import { Plus } from "lucide-react";
 interface PipelineBoardProps {
   stages: PipelineStage[];
   deals: Deal[];
+  /** user_id → display name, for the card's "Added By" row. */
+  creatorNames?: Record<string, string>;
   onDealMoved: (dealId: string, newStageId: string) => void;
   onAddDeal: (stageId: string) => void;
   onEditDeal: (deal: Deal) => void;
@@ -39,6 +41,7 @@ function formatCurrency(value: number) {
 export function PipelineBoard({
   stages,
   deals,
+  creatorNames,
   onDealMoved,
   onAddDeal,
   onEditDeal,
@@ -117,7 +120,9 @@ export function PipelineBoard({
             <StageColumn
               key={stage.id}
               stage={stage}
+              stages={sortedStages}
               deals={stageDeals}
+              creatorNames={creatorNames}
               totalValue={totalValue}
               onAddDeal={onAddDeal}
               onEditDeal={onEditDeal}
@@ -139,6 +144,8 @@ export function PipelineBoard({
               stage={
                 sortedStages.find((s) => s.id === activeDeal.stage_id) ?? null
               }
+              stages={sortedStages}
+              addedBy={creatorNames?.[activeDeal.user_id] ?? null}
               onEdit={() => {}}
               isOverlay
             />
@@ -166,13 +173,17 @@ export function PipelineBoard({
 
 function StageColumn({
   stage,
+  stages,
   deals,
+  creatorNames,
   totalValue,
   onAddDeal,
   onEditDeal,
 }: {
   stage: PipelineStage;
+  stages: PipelineStage[];
   deals: Deal[];
+  creatorNames?: Record<string, string>;
   totalValue: number;
   onAddDeal: (stageId: string) => void;
   onEditDeal: (deal: Deal) => void;
@@ -221,6 +232,8 @@ function StageColumn({
               key={deal.id}
               deal={deal}
               stage={stage}
+              stages={stages}
+              addedBy={creatorNames?.[deal.user_id] ?? null}
               onEdit={onEditDeal}
             />
           ))
@@ -243,10 +256,14 @@ function StageColumn({
 function DraggableDealCard({
   deal,
   stage,
+  stages,
+  addedBy,
   onEdit,
 }: {
   deal: Deal;
   stage: PipelineStage;
+  stages: PipelineStage[];
+  addedBy?: string | null;
   onEdit: (deal: Deal) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -260,7 +277,13 @@ function DraggableDealCard({
       {...attributes}
       style={{ opacity: isDragging ? 0.3 : 1, touchAction: "none" }}
     >
-      <DealCard deal={deal} stage={stage} onEdit={onEdit} />
+      <DealCard
+        deal={deal}
+        stage={stage}
+        stages={stages}
+        addedBy={addedBy}
+        onEdit={onEdit}
+      />
     </div>
   );
 }

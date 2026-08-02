@@ -56,6 +56,8 @@ export default function PipelinesPage() {
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
+  // user_id → display name, so each card can show who added the job.
+  const [creatorNames, setCreatorNames] = useState<Record<string, string>>({});
 
   // Dialog / sheet state
   const [newPipelineOpen, setNewPipelineOpen] = useState(false);
@@ -203,6 +205,26 @@ export default function PipelinesPage() {
       cancelled = true;
     };
   }, [selectedPipelineId, loadStages, loadDeals]);
+
+  // Account members, for the card's "Added By" row. RLS scopes this to
+  // the caller's account, so it's just the team roster.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email");
+      if (cancelled || !data) return;
+      const map: Record<string, string> = {};
+      for (const p of data) {
+        map[p.user_id] = p.full_name || p.email || "Unknown";
+      }
+      setCreatorNames(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
 
   const refreshPipelines = useCallback(async () => {
     const list = await loadPipelines();
@@ -474,6 +496,7 @@ export default function PipelinesPage() {
           <PipelineBoard
             stages={stages}
             deals={deals}
+            creatorNames={creatorNames}
             onDealMoved={handleDealMoved}
             onAddDeal={handleAddDeal}
             onEditDeal={handleViewDeal}
