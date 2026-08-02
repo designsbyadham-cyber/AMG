@@ -82,14 +82,16 @@ export function InviteMemberDialog({
   onCreated,
 }: InviteMemberDialogProps) {
   const { account } = useAuth();
-  const [role, setRole] = useState<InviteRole>('agent');
+  // Viewer by default — least privilege for a new teammate; the admin
+  // can promote them from the Members tab once they're in.
+  const [role, setRole] = useState<InviteRole>('viewer');
   const [expiry, setExpiry] = useState<string>('7');
   const [label, setLabel] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<CreatedInvite | null>(null);
 
   function reset() {
-    setRole('agent');
+    setRole('viewer');
     setExpiry('7');
     setLabel('');
     setResult(null);

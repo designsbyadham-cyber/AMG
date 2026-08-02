@@ -52,6 +52,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { createClient } from '@/lib/supabase/client';
+import {
+  clearPendingInvite,
+  setPendingInvite,
+} from '@/lib/auth/pending-invite';
 
 interface PeekOk {
   ok: true;
@@ -109,6 +113,19 @@ export default function JoinPage() {
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
+  // Stash the token for the signup + email-confirmation round trip, so
+  // a confirmation redirect that drops the URL can still be resumed
+  // (see PendingInviteResume). Terminal failures clear it instead, so a
+  // dead token can't bounce the user back here forever.
+  const rememberFromPeek = useCallback(
+    (result: PeekResult) => {
+      if (!token) return;
+      if (result.ok) setPendingInvite(token);
+      else if (result.reason !== 'server_error') clearPendingInvite();
+    },
+    [token],
+  );
+
   // Extracted so the "Try again" button on the server_error card
   // can re-run the same logic without remounting the component.
   const loadPeekAndAuth = useCallback(async () => {
@@ -124,13 +141,14 @@ export default function JoinPage() {
       ]);
       const peekBody = (await peekRes.json()) as PeekResult;
       setPeek(peekBody);
+      rememberFromPeek(peekBody);
       setAuthedUserId(authRes.data.user?.id ?? null);
     } catch (err) {
       console.error('[join] peek error:', err);
       setPeek({ ok: false, reason: 'server_error' });
       setAuthedUserId(null);
     }
-  }, [token]);
+  }, [token, rememberFromPeek]);
 
   // Fetch peek + auth state on mount. The peek endpoint is
   // rate-limited per-IP (30/min) so double-mounting in React 19
@@ -150,6 +168,7 @@ export default function JoinPage() {
         const peekBody = (await peekRes.json()) as PeekResult;
         if (cancelled) return;
         setPeek(peekBody);
+        rememberFromPeek(peekBody);
         setAuthedUserId(authRes.data.user?.id ?? null);
       } catch (err) {
         console.error('[join] peek error:', err);
@@ -161,7 +180,7 @@ export default function JoinPage() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, rememberFromPeek]);
 
   const handleAccept = useCallback(async () => {
     if (!token) return;
@@ -192,6 +211,9 @@ export default function JoinPage() {
         return;
       }
       toast.success('Welcome to the team');
+      // Redeemed — drop the stashed token so the resume redirect
+      // doesn't fire again on the next page load.
+      clearPendingInvite();
       // Full reload (not router.push) so AuthProvider re-fetches
       // the profile with the new account_id and account_role.
       window.location.href = '/dashboard';
