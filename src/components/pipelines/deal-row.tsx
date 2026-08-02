@@ -32,6 +32,14 @@ interface DealRowProps {
   stages: PipelineStage[];
   addedBy?: string | null;
   onOpen: (deal: Deal) => void;
+  /**
+   * Grip element wired to the drag listeners. Kept as a dedicated handle
+   * (rather than making the whole row draggable) so touch users can still
+   * scroll the list vertically by swiping the row body.
+   */
+  dragHandle?: React.ReactNode;
+  /** True while this row is the one being dragged. */
+  isDragging?: boolean;
 }
 
 /**
@@ -40,7 +48,15 @@ interface DealRowProps {
  * Collapses to a stacked layout under `md` so it stays readable on
  * phones without a horizontal scroll.
  */
-export function DealRow({ deal, stage, stages, addedBy, onOpen }: DealRowProps) {
+export function DealRow({
+  deal,
+  stage,
+  stages,
+  addedBy,
+  onOpen,
+  dragHandle,
+  isDragging,
+}: DealRowProps) {
   const c = deal.contact;
   const headline = vehicleName(deal);
   const showTitleAsSecondary = headline !== deal.title;
@@ -63,7 +79,9 @@ export function DealRow({ deal, stage, stages, addedBy, onOpen }: DealRowProps) 
           onOpen(deal);
         }
       }}
-      className="group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+      className={`group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md ${
+        isDragging ? "opacity-40" : ""
+      }`}
     >
       {/* Stage colour accent down the left edge, clipped to the rounded corners */}
       <span
@@ -73,6 +91,8 @@ export function DealRow({ deal, stage, stages, addedBy, onOpen }: DealRowProps) 
       />
 
       <div className="flex flex-col gap-4 py-3 pl-4 pr-3 md:flex-row md:items-center">
+        {dragHandle}
+
         {/* ── Photo — portrait 3:4, sized to the row height ───────── */}
         <div className="relative shrink-0 self-start md:self-center">
           <div className="aspect-[3/4] w-20 overflow-hidden rounded-lg border border-border/60 bg-muted sm:w-24">
@@ -201,8 +221,28 @@ export function DealRow({ deal, stage, stages, addedBy, onOpen }: DealRowProps) 
             </div>
           </div>
 
-          {/* Status: quality check + progress */}
+          {/* Status: current stage + quality check + progress */}
           <div className="min-w-0 space-y-2.5">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Status
+              </p>
+              <span
+                className="mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
+                style={{
+                  backgroundColor: `${stage?.color ?? "#94a3b8"}1f`,
+                  color: stage?.color ?? "#94a3b8",
+                }}
+              >
+                <span
+                  aria-hidden
+                  className="size-1.5 rounded-full"
+                  style={{ backgroundColor: stage?.color ?? "#94a3b8" }}
+                />
+                {stage?.name ?? "No stage"}
+              </span>
+            </div>
+
             {qc && (
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -250,9 +290,6 @@ export function DealRow({ deal, stage, stages, addedBy, onOpen }: DealRowProps) 
                   />
                 </div>
               )}
-              <p className="mt-1 truncate text-[11px] font-semibold text-foreground">
-                {stage?.name ?? "—"}
-              </p>
             </div>
           </div>
         </div>

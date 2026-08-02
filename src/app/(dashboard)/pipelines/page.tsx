@@ -543,6 +543,7 @@ export default function PipelinesPage() {
               creatorNames={creatorNames}
               onOpenDeal={handleViewDeal}
               onAddDeal={handleAddDeal}
+              onDealMoved={handleDealMoved}
             />
           ) : (
             <PipelineBoard
