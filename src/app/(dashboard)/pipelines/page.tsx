@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Pipeline, PipelineStage, Deal } from "@/types";
 import { PipelineBoard } from "@/components/pipelines/pipeline-board";
+import { JobList } from "@/components/pipelines/job-list";
 import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
 import { DealForm } from "@/components/pipelines/deal-form";
 import { DealDetailCard } from "@/components/pipelines/deal-detail-card";
@@ -25,7 +26,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GitBranch, Plus, ChevronDown, Settings } from "lucide-react";
+import {
+  GitBranch,
+  Plus,
+  ChevronDown,
+  Settings,
+  LayoutList,
+  Columns3,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
 import { GatedButton } from "@/components/ui/gated-button";
@@ -58,6 +66,9 @@ export default function PipelinesPage() {
   const [loading, setLoading] = useState(true);
   // user_id → display name, so each card can show who added the job.
   const [creatorNames, setCreatorNames] = useState<Record<string, string>>({});
+  // Vertical job log by default; the drag-and-drop board stays available
+  // for moving jobs between stages.
+  const [view, setView] = useState<"list" | "board">("list");
 
   // Dialog / sheet state
   const [newPipelineOpen, setNewPipelineOpen] = useState(false);
@@ -448,6 +459,38 @@ export default function PipelinesPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* View toggle — list (scroll down) vs board (drag between stages) */}
+          <div className="flex items-center rounded-lg border border-border bg-card p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("list")}
+              aria-pressed={view === "list"}
+              title="Job log"
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                view === "list"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <LayoutList className="size-3.5" />
+              <span className="max-sm:sr-only">Log</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("board")}
+              aria-pressed={view === "board"}
+              title="Pipeline board"
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                view === "board"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Columns3 className="size-3.5" />
+              <span className="max-sm:sr-only">Board</span>
+            </button>
+          </div>
+
           <GatedButton
             variant="outline"
             canAct={canEditSettings}
@@ -493,14 +536,24 @@ export default function PipelinesPage() {
       ) : (
         <>
           <PipelineAnalytics stages={stages} deals={deals} />
-          <PipelineBoard
-            stages={stages}
-            deals={deals}
-            creatorNames={creatorNames}
-            onDealMoved={handleDealMoved}
-            onAddDeal={handleAddDeal}
-            onEditDeal={handleViewDeal}
-          />
+          {view === "list" ? (
+            <JobList
+              stages={stages}
+              deals={deals}
+              creatorNames={creatorNames}
+              onOpenDeal={handleViewDeal}
+              onAddDeal={handleAddDeal}
+            />
+          ) : (
+            <PipelineBoard
+              stages={stages}
+              deals={deals}
+              creatorNames={creatorNames}
+              onDealMoved={handleDealMoved}
+              onAddDeal={handleAddDeal}
+              onEditDeal={handleViewDeal}
+            />
+          )}
         </>
       )}
 

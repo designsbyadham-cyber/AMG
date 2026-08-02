@@ -3,6 +3,16 @@
 import type { Deal, PipelineStage } from "@/types";
 import { SERVICE_TYPE_COLORS, getServiceTypes } from "@/lib/services";
 import {
+  dueDate as getDueDate,
+  formatCurrency,
+  formatDate,
+  getDateStatus,
+  getProgress,
+  getQcState,
+  initials,
+  vehicleName,
+} from "@/lib/jobs";
+import {
   AlertTriangle,
   Calendar,
   Check,
@@ -27,64 +37,11 @@ interface DealCardProps {
   isOverlay?: boolean;
 }
 
-function formatCurrency(value: number, currency?: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency || "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0));
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
-function initials(name?: string, fallback?: string) {
-  const source = (name || fallback || "?").trim();
-  if (!source) return "?";
-  return source.charAt(0).toUpperCase();
-}
-
-function getDateStatus(dateStr: string, status?: string): "overdue" | "today" | "future" {
-  if (status === "won" || status === "lost") return "future";
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const date = new Date(dateStr);
-  date.setHours(0, 0, 0, 0);
-  if (date < today) return "overdue";
-  if (date.getTime() === today.getTime()) return "today";
-  return "future";
-}
-
 /**
- * Quality-check state derived from where the job sits relative to the
- * "QC" stage. Returns null when the pipeline has no QC stage, so the
- * block hides rather than showing a meaningless badge.
+ * Compact job card for the drag-and-drop board, where each column is
+ * only ~260-320px wide. The wide horizontal presentation lives in
+ * `deal-row.tsx` for the vertical job log.
  */
-function getQcState(deal: Deal, stages: PipelineStage[]) {
-  const ordered = [...stages].sort((a, b) => a.position - b.position);
-  const qcIndex = ordered.findIndex((s) => s.name.trim().toLowerCase() === "qc");
-  if (qcIndex === -1) return null;
-  const currentIndex = ordered.findIndex((s) => s.id === deal.stage_id);
-  if (currentIndex === -1) return null;
-
-  if (deal.status === "lost") {
-    return { label: "Rejected", cls: "bg-red-500/10 text-red-500", done: false };
-  }
-  if (currentIndex > qcIndex) {
-    return { label: "QC Verified", cls: "bg-emerald-500/10 text-emerald-500", done: true };
-  }
-  if (currentIndex === qcIndex) {
-    return { label: "In Quality Check", cls: "bg-cyan-500/10 text-cyan-500", done: false };
-  }
-  return { label: "QC Pending", cls: "bg-muted text-muted-foreground", done: false };
-}
-
 export function DealCard({
   deal,
   stage,
@@ -95,11 +52,8 @@ export function DealCard({
 }: DealCardProps) {
   const c = deal.contact;
 
-  // Vehicle identity: "Ferrari F8" + "(2022)"
-  const vehicleName = [c?.car_brand, c?.car_model].filter(Boolean).join(" ");
-  const hasVehicle = !!vehicleName;
-  const headline = hasVehicle ? vehicleName : deal.title;
-  const secondaryLabel = hasVehicle ? deal.title : null;
+  const headline = vehicleName(deal);
+  const secondaryLabel = headline !== deal.title ? deal.title : null;
 
   const contactName = c?.name || null;
   const contactPhone = c?.phone || null;
@@ -109,17 +63,9 @@ export function DealCard({
   const assigneeLabel = deal.assignee?.full_name || null;
   const photo = deal.image_urls?.[0] ?? null;
 
-  // Progress through the pipeline (position of this stage in the flow).
-  const ordered = [...stages].sort((a, b) => a.position - b.position);
-  const currentIndex = ordered.findIndex((s) => s.id === deal.stage_id);
-  const totalStages = ordered.length;
-  const progressPct =
-    totalStages > 1 && currentIndex >= 0
-      ? Math.round((currentIndex / (totalStages - 1)) * 100)
-      : null;
-
+  const progress = getProgress(deal, stages);
   const qc = getQcState(deal, stages);
-  const dueDate = deal.delivery_date ?? deal.expected_close_date ?? null;
+  const due = getDueDate(deal);
 
   return (
     <div
@@ -147,10 +93,8 @@ export function DealCard({
       />
 
       <div className="flex flex-col gap-3 p-3">
-        {/* ── Vehicle photo ───────────────────────────────────────────
-            Portrait 3:4, centred, capped at 160px wide so it reads as a
-            feature image without dominating the card. Falls back to a
-            placeholder tile when the job has no photo attached. */}
+        {/* Vehicle photo — portrait 3:4, centred, capped so it reads as a
+            feature image without dominating the narrow column. */}
         <div className="relative mx-auto w-full max-w-[160px]">
           <div className="aspect-[3/4] overflow-hidden rounded-lg border border-border/60 bg-muted">
             {photo ? (
@@ -169,7 +113,6 @@ export function DealCard({
             )}
           </div>
 
-          {/* Won / lost badge overlays the photo's top-right corner */}
           {deal.status === "won" && (
             <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow">
               <Check className="size-3" />
@@ -184,7 +127,7 @@ export function DealCard({
           )}
         </div>
 
-        {/* ── Vehicle + job title ─────────────────────────────────── */}
+        {/* Vehicle + job title */}
         <div className="text-center">
           <h4 className="truncate text-sm font-bold leading-snug text-foreground" title={headline}>
             {headline}
@@ -213,7 +156,7 @@ export function DealCard({
           )}
         </div>
 
-        {/* ── Customer ────────────────────────────────────────────── */}
+        {/* Customer */}
         <div className="flex items-center gap-2 border-t border-border/50 pt-2.5">
           <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-foreground">
             {initials(c?.name, c?.phone)}
@@ -226,7 +169,7 @@ export function DealCard({
           </div>
         </div>
 
-        {/* ── Services ────────────────────────────────────────────── */}
+        {/* Services */}
         {services.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {services.map((s) => (
@@ -242,7 +185,7 @@ export function DealCard({
           </div>
         )}
 
-        {/* ── Quality check ───────────────────────────────────────── */}
+        {/* Quality check */}
         {qc && (
           <div className="border-t border-border/50 pt-2.5">
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -261,21 +204,21 @@ export function DealCard({
           </div>
         )}
 
-        {/* ── Progress ────────────────────────────────────────────── */}
-        {progressPct !== null && (
+        {/* Progress */}
+        {progress && (
           <div className="border-t border-border/50 pt-2.5">
             <div className="mb-1.5 flex items-baseline justify-between">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Progress
               </p>
               <span className="text-[10px] font-medium tabular-nums text-muted-foreground">
-                {currentIndex + 1}/{totalStages}
+                {progress.step}/{progress.total}
               </span>
             </div>
             <div
               className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
               role="progressbar"
-              aria-valuenow={progressPct}
+              aria-valuenow={progress.pct}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-label={`Progress: ${stage?.name ?? "unknown stage"}`}
@@ -283,7 +226,7 @@ export function DealCard({
               <div
                 className="h-full rounded-full transition-all"
                 style={{
-                  width: `${progressPct}%`,
+                  width: `${progress.pct}%`,
                   backgroundColor: stage?.color ?? "#94a3b8",
                 }}
               />
@@ -292,8 +235,8 @@ export function DealCard({
           </div>
         )}
 
-        {/* ── Dates (stacked rows: label left, value right) ────────── */}
-        {(deal.start_date || dueDate) && (
+        {/* Dates — stacked rows: label left, value right */}
+        {(deal.start_date || due) && (
           <div className="space-y-1 border-t border-border/50 pt-2.5">
             {deal.start_date && (
               <div className="flex items-center justify-between gap-2">
@@ -306,9 +249,9 @@ export function DealCard({
                 </span>
               </div>
             )}
-            {dueDate &&
+            {due &&
               (() => {
-                const ds = getDateStatus(dueDate, deal.status);
+                const ds = getDateStatus(due, deal.status);
                 return (
                   <div className="flex items-center justify-between gap-2">
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -328,7 +271,7 @@ export function DealCard({
                             : "text-primary"
                       }`}
                     >
-                      {formatDate(dueDate)}
+                      {formatDate(due)}
                     </span>
                   </div>
                 );
@@ -336,7 +279,7 @@ export function DealCard({
           </div>
         )}
 
-        {/* ── Value ───────────────────────────────────────────────── */}
+        {/* Value */}
         <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-2.5">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Value
@@ -346,7 +289,7 @@ export function DealCard({
           </span>
         </div>
 
-        {/* ── People: performed by + added by ─────────────────────── */}
+        {/* People */}
         {(assigneeLabel || addedBy) && (
           <div className="space-y-1.5 border-t border-border/50 pt-2.5">
             {assigneeLabel && (
