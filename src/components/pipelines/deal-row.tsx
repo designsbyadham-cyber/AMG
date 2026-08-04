@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { Deal, PipelineStage } from "@/types";
 import { SERVICE_TYPE_COLORS, getServiceTypes } from "@/lib/services";
 import {
@@ -37,16 +38,21 @@ interface DealRowProps {
    * (rather than making the whole row draggable) so touch users can still
    * scroll the list vertically by swiping the row body.
    */
-  dragHandle?: React.ReactNode;
+  dragHandle?: ReactNode;
   /** True while this row is the one being dragged. */
   isDragging?: boolean;
 }
 
 /**
- * Horizontal job row for the vertical job log. Photo on the left, then
- * vehicle/customer, people, status, and dates flowing across the row.
- * Collapses to a stacked layout under `md` so it stays readable on
- * phones without a horizontal scroll.
+ * A job in the log.
+ *
+ * Two shapes from one DOM tree:
+ *  - **Mobile** stacks into a card — big hero photo, then the facts in
+ *    priority order (identity → status → money/dates → people). The
+ *    `order-*` utilities drive that sequence; `contents` on the middle
+ *    wrapper lets its children take part in the same flex ordering.
+ *  - **`md`+** lays the same blocks out horizontally: small portrait
+ *    photo, three info columns, and a right rail for dates and value.
  */
 export function DealRow({
   deal,
@@ -67,6 +73,7 @@ export function DealRow({
   const qc = getQcState(deal, stages);
   const progress = getProgress(deal, stages);
   const due = getDueDate(deal);
+  const dueStatus = due ? getDateStatus(due, deal.status) : null;
 
   return (
     <div
@@ -90,12 +97,18 @@ export function DealRow({
         style={{ backgroundColor: stage?.color ?? "#94a3b8" }}
       />
 
-      <div className="flex flex-col gap-4 py-3 pl-4 pr-3 md:flex-row md:items-center">
-        {dragHandle}
+      {/* Grip floats over the photo on mobile so it doesn't eat a row of
+          its own; on md+ it sits inline at the start of the row. */}
+      {dragHandle && (
+        <div className="absolute right-2 top-2 z-10 rounded-md bg-background/80 backdrop-blur-sm md:static md:z-auto md:bg-transparent md:backdrop-blur-none">
+          {dragHandle}
+        </div>
+      )}
 
-        {/* ── Photo — portrait 3:4, sized to the row height ───────── */}
-        <div className="relative shrink-0 self-start md:self-center">
-          <div className="aspect-[3/4] w-20 overflow-hidden rounded-lg border border-border/60 bg-muted sm:w-24">
+      <div className="flex flex-col gap-4 py-3 pl-4 pr-3 md:flex-row md:items-center">
+        {/* ── Photo — full-width hero on mobile, small portrait on md+ ── */}
+        <div className="order-1 w-full shrink-0 md:order-none md:w-24">
+          <div className="aspect-[16/10] overflow-hidden rounded-lg border border-border/60 bg-muted sm:aspect-[2/1] md:aspect-[3/4]">
             {photo ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -106,18 +119,22 @@ export function DealRow({
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
-                <Car className="size-6" />
+                <Car className="size-8 md:size-6" />
               </div>
             )}
           </div>
         </div>
 
-        {/* ── Info columns ────────────────────────────────────────── */}
-        <div className="grid min-w-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[1.4fr_1fr_1.1fr] lg:gap-6">
-          {/* Vehicle + customer */}
-          <div className="min-w-0">
+        {/* `contents` on mobile so the three blocks below order themselves
+            against the photo and the dates rail; a real grid on md+. */}
+        <div className="contents md:grid md:min-w-0 md:flex-1 md:grid-cols-[1.4fr_1fr_1.1fr] md:gap-6">
+          {/* Identity — vehicle, customer, services */}
+          <div className="order-2 min-w-0 md:order-none">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <h3 className="truncate text-base font-bold text-foreground" title={headline}>
+              <h3
+                className="truncate text-lg font-bold text-foreground md:text-base"
+                title={headline}
+              >
                 {headline}
               </h3>
               {c?.car_year && (
@@ -184,8 +201,8 @@ export function DealRow({
             </span>
           </div>
 
-          {/* People */}
-          <div className="min-w-0 space-y-2.5">
+          {/* People — least critical, so it sinks to the bottom on mobile */}
+          <div className="order-5 min-w-0 space-y-2.5 border-t border-border/60 pt-3 md:order-none md:border-t-0 md:pt-0">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Performed By
@@ -221,14 +238,14 @@ export function DealRow({
             </div>
           </div>
 
-          {/* Status: current stage + quality check + progress */}
-          <div className="min-w-0 space-y-2.5">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {/* Status — stage, quality check, progress */}
+          <div className="order-3 min-w-0 space-y-2.5 border-t border-border/60 pt-3 md:order-none md:border-t-0 md:pt-0">
+            <div className="flex flex-wrap items-center gap-2 md:block">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:mb-1">
                 Status
               </p>
               <span
-                className="mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
                 style={{
                   backgroundColor: `${stage?.color ?? "#94a3b8"}1f`,
                   color: stage?.color ?? "#94a3b8",
@@ -241,10 +258,25 @@ export function DealRow({
                 />
                 {stage?.name ?? "No stage"}
               </span>
+
+              {qc && (
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold md:hidden ${qc.cls}`}
+                >
+                  {qc.done ? (
+                    <CircleCheck className="size-3.5" />
+                  ) : (
+                    <CircleDashed className="size-3.5" />
+                  )}
+                  {qc.label}
+                </span>
+              )}
             </div>
 
+            {/* On md+ the quality check gets its own labelled block; on
+                mobile it rides alongside the status pill above. */}
             {qc && (
-              <div>
+              <div className="max-md:hidden">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Quality Check
                 </p>
@@ -294,12 +326,13 @@ export function DealRow({
           </div>
         </div>
 
-        {/* ── Dates + value, right rail ───────────────────────────── */}
-        <div className="shrink-0 space-y-2 border-border/60 pt-3 md:min-w-[150px] md:border-l md:pl-5 md:pt-0 md:text-right">
+        {/* ── Money + dates — a three-up stat strip on mobile, a right
+            rail on md+. Sits above "people" on mobile by design. ── */}
+        <div className="order-4 grid shrink-0 grid-cols-3 gap-3 border-t border-border/60 pt-3 md:order-none md:block md:min-w-[150px] md:space-y-2 md:border-l md:border-t-0 md:pl-5 md:pt-0 md:text-right">
           <div>
-            <p className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:justify-end">
+            <p className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               <Clock className="size-3" />
-              Entry Date
+              Entry
             </p>
             <p className="text-sm font-bold tabular-nums text-foreground">
               {deal.start_date ? formatDate(deal.start_date) : "—"}
@@ -307,20 +340,20 @@ export function DealRow({
           </div>
 
           <div>
-            <p className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:justify-end">
-              {due && getDateStatus(due, deal.status) === "overdue" ? (
+            <p className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {dueStatus === "overdue" ? (
                 <AlertTriangle className="size-3" />
               ) : (
                 <Calendar className="size-3" />
               )}
-              Est. Completion
+              Due
             </p>
             {due ? (
               <p
                 className={`text-sm font-bold tabular-nums ${
-                  getDateStatus(due, deal.status) === "overdue"
+                  dueStatus === "overdue"
                     ? "text-red-400"
-                    : getDateStatus(due, deal.status) === "today"
+                    : dueStatus === "today"
                       ? "text-amber-400"
                       : "text-primary"
                 }`}
@@ -332,11 +365,11 @@ export function DealRow({
             )}
           </div>
 
-          <div className="border-t border-border/60 pt-2">
+          <div className="md:border-t md:border-border/60 md:pt-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Value
             </p>
-            <p className="text-base font-bold text-foreground">
+            <p className="text-base font-bold text-foreground md:text-base">
               {formatCurrency(deal.value, deal.currency)}
             </p>
           </div>

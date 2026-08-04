@@ -360,7 +360,7 @@ function DraggableDealRow({
       aria-label={`Drag ${deal.title} to another status`}
       onClick={(e) => e.stopPropagation()}
       style={{ touchAction: "none" }}
-      className="flex shrink-0 cursor-grab items-center self-stretch rounded-md px-0.5 text-muted-foreground/50 transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing max-md:self-start"
+      className="flex shrink-0 cursor-grab items-center justify-center rounded-md p-1.5 text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing md:self-stretch md:p-0.5"
     >
       <GripVertical className="size-4" />
     </span>
