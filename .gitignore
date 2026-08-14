@@ -42,3 +42,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Personal Claude Code settings (hooks/permissions) — not shared
+.claude/settings.local.json
