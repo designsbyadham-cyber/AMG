@@ -1,7 +1,7 @@
 "use client";
 
 import type { Deal, PipelineStage } from "@/types";
-import { SERVICE_TYPE_COLORS, getServiceTypes } from "@/lib/services";
+import { SERVICE_CHIP_CLASS, getServiceTypes } from "@/lib/services";
 import {
   dueDate as getDueDate,
   formatCurrency,
@@ -84,14 +84,6 @@ export function DealCard({
         isOverlay ? "shadow-xl" : "hover:-translate-y-0.5 hover:border-border hover:shadow-lg"
       }`}
     >
-      {/* Stage colour accent — full-width top bar, clipped to the card's
-          rounded corners by overflow-hidden. */}
-      <span
-        aria-hidden
-        className="h-1 w-full shrink-0"
-        style={{ backgroundColor: stage?.color ?? "#94a3b8" }}
-      />
-
       <div className="flex flex-col gap-3 p-3">
         {/* Vehicle photo — portrait 3:4, centred, capped so it reads as a
             feature image without dominating the narrow column. */}
@@ -114,13 +106,13 @@ export function DealCard({
           </div>
 
           {deal.status === "won" && (
-            <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow">
+            <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-success px-2 py-0.5 text-[10px] font-semibold text-white shadow">
               <Check className="size-3" />
               Won
             </span>
           )}
           {deal.status === "lost" && (
-            <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow">
+            <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-danger px-2 py-0.5 text-[10px] font-semibold text-white shadow">
               <X className="size-3" />
               Lost
             </span>
@@ -176,7 +168,7 @@ export function DealCard({
               <span
                 key={s}
                 className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                  SERVICE_TYPE_COLORS[s] ?? "bg-muted text-muted-foreground"
+                  SERVICE_CHIP_CLASS
                 }`}
               >
                 {s}
@@ -265,9 +257,9 @@ export function DealCard({
                     <span
                       className={`text-[11px] font-semibold tabular-nums ${
                         ds === "overdue"
-                          ? "text-red-400"
+                          ? "text-danger"
                           : ds === "today"
-                            ? "text-amber-400"
+                            ? "text-warning"
                             : "text-primary"
                       }`}
                     >

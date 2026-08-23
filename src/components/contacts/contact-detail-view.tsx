@@ -480,7 +480,7 @@ export function ContactDetailView({
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-muted-foreground text-xs">
-                      Phone <span className="text-red-400">*</span>
+                      Phone <span className="text-danger">*</span>
                     </Label>
                     <Input
                       value={editPhone}
@@ -733,7 +733,7 @@ export function ContactDetailView({
                           </p>
                           <button
                             onClick={() => deleteNote(note.id)}
-                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-all cursor-pointer shrink-0"
+                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-danger transition-all cursor-pointer shrink-0"
                           >
                             <Trash2 className="size-3.5" />
                           </button>
@@ -845,7 +845,7 @@ export function ContactDetailView({
                               className={
                                 deal.status === 'won'
                                   ? 'text-primary'
-                                  : 'text-red-400'
+                                  : 'text-danger'
                               }
                             >
                               {deal.status}

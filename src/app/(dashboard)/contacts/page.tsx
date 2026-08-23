@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag } from '@/types';
-import { SERVICE_TYPE_COLORS, getServiceTypes } from '@/lib/services';
+import { SERVICE_CHIP_CLASS, getServiceTypes } from '@/lib/services';
 import { LEAD_STATUS_META } from '@/lib/lead-status';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -344,7 +344,7 @@ export default function ContactsPage() {
                           {services.map((s) => (
                             <span
                               key={s}
-                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SERVICE_TYPE_COLORS[s] ?? 'bg-muted text-muted-foreground'}`}
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SERVICE_CHIP_CLASS}`}
                             >
                               {s}
                             </span>

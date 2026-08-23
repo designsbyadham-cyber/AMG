@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { Deal, PipelineStage } from "@/types";
-import { SERVICE_TYPE_COLORS, getServiceTypes } from "@/lib/services";
+import { SERVICE_CHIP_CLASS, getServiceTypes } from "@/lib/services";
 import {
   dueDate as getDueDate,
   formatCurrency,
@@ -90,13 +90,6 @@ export function DealRow({
         isDragging ? "opacity-40" : ""
       }`}
     >
-      {/* Stage colour accent down the left edge, clipped to the rounded corners */}
-      <span
-        aria-hidden
-        className="absolute inset-y-0 left-0 w-1"
-        style={{ backgroundColor: stage?.color ?? "#94a3b8" }}
-      />
-
       {/* Grip floats over the photo on mobile so it doesn't eat a row of
           its own; on md+ it sits inline at the start of the row. */}
       {dragHandle && (
@@ -141,13 +134,13 @@ export function DealRow({
                 <span className="text-sm font-medium text-muted-foreground">({c.car_year})</span>
               )}
               {deal.status === "won" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-500">
+                <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success">
                   <Check className="size-3" />
                   Won
                 </span>
               )}
               {deal.status === "lost" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+                <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-2 py-0.5 text-[10px] font-semibold text-danger">
                   <X className="size-3" />
                   Lost
                 </span>
@@ -186,7 +179,7 @@ export function DealRow({
                   <span
                     key={s}
                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                      SERVICE_TYPE_COLORS[s] ?? "bg-muted text-muted-foreground"
+                      SERVICE_CHIP_CLASS
                     }`}
                   >
                     {s}
@@ -244,13 +237,7 @@ export function DealRow({
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:mb-1">
                 Status
               </p>
-              <span
-                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
-                style={{
-                  backgroundColor: `${stage?.color ?? "#94a3b8"}1f`,
-                  color: stage?.color ?? "#94a3b8",
-                }}
-              >
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground">
                 <span
                   aria-hidden
                   className="size-1.5 rounded-full"
@@ -352,9 +339,9 @@ export function DealRow({
               <p
                 className={`text-sm font-bold tabular-nums ${
                   dueStatus === "overdue"
-                    ? "text-red-400"
+                    ? "text-danger"
                     : dueStatus === "today"
-                      ? "text-amber-400"
+                      ? "text-warning"
                       : "text-primary"
                 }`}
               >

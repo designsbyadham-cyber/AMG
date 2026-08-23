@@ -13,12 +13,12 @@ export type ServiceType = (typeof SERVICE_TYPES)[number];
 
 // Badge colours keyed by service name. Unknown values fall back to a
 // neutral style at the call site.
-export const SERVICE_TYPE_COLORS: Record<string, string> = {
-  'Interior Upgrades': 'bg-purple-500/10 text-purple-600',
-  'Exterior Upgrades': 'bg-blue-500/10 text-blue-600',
-  'Detailing & Protection': 'bg-emerald-500/10 text-emerald-600',
-  Tinting: 'bg-amber-500/10 text-amber-600',
-};
+/**
+ * Services are categories, not signals, so they don't get their own
+ * hues — four coloured chips per card was most of the visual noise on
+ * the job list. One neutral chip; the label carries the meaning.
+ */
+export const SERVICE_CHIP_CLASS = 'bg-muted text-muted-foreground';
 
 /**
  * Normalise a contact's services into a string array, regardless of

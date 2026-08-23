@@ -563,7 +563,7 @@ export function DealForm({
                   </div>
                 </div>
                 {selectedStageName === "Collected" && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                  <p className="text-xs text-warning">
                     Moving to Collected triggers the 10-day quality check follow-up.
                   </p>
                 )}

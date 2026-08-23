@@ -66,13 +66,13 @@ export function getQcState(deal: Deal, stages: PipelineStage[]): QcState | null 
   if (currentIndex === -1) return null;
 
   if (deal.status === 'lost') {
-    return { label: 'Rejected', cls: 'bg-red-500/10 text-red-500', done: false };
+    return { label: 'Rejected', cls: 'bg-danger-soft text-danger', done: false };
   }
   if (currentIndex > qcIndex) {
-    return { label: 'QC Verified', cls: 'bg-emerald-500/10 text-emerald-500', done: true };
+    return { label: 'QC Verified', cls: 'bg-success-soft text-success', done: true };
   }
   if (currentIndex === qcIndex) {
-    return { label: 'In Quality Check', cls: 'bg-cyan-500/10 text-cyan-500', done: false };
+    return { label: 'In Quality Check', cls: 'bg-primary-soft text-primary', done: false };
   }
   return { label: 'QC Pending', cls: 'bg-muted text-muted-foreground', done: false };
 }

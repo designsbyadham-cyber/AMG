@@ -17,9 +17,6 @@ interface CallLogCardProps {
 
 export function CallLogCard({ contact: c, onOpen }: CallLogCardProps) {
   const status = getContactStatus(c);
-  const accent =
-    status === 'contacted' ? '#10b981' : status === 'follow_up' ? '#3b82f6' : '#f59e0b';
-
   const vehicle = [c.car_brand, c.car_model].filter(Boolean).join(' ') || null;
   const display = c.name || c.phone;
 
@@ -36,13 +33,6 @@ export function CallLogCard({ contact: c, onOpen }: CallLogCardProps) {
       }}
       className="group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-card pl-4 pr-3 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-border hover:shadow-lg"
     >
-      {/* Status accent bar — clipped by overflow-hidden to the rounded corners */}
-      <span
-        aria-hidden
-        className="absolute inset-y-0 left-0 w-1"
-        style={{ backgroundColor: accent }}
-      />
-
       {/* Name + lead badge */}
       <div className="flex items-start justify-between gap-2">
         <h4 className="flex-1 truncate text-sm font-semibold leading-snug text-foreground" title={display}>
@@ -83,7 +73,7 @@ export function CallLogCard({ contact: c, onOpen }: CallLogCardProps) {
         {status === 'follow_up' && c.next_follow_up_at && (() => {
           const rel = relativeDay(c.next_follow_up_at);
           return (
-            <span className={`flex items-center gap-1 ${rel.overdue ? 'text-red-400' : 'text-blue-400'}`}>
+            <span className={`flex items-center gap-1 ${rel.overdue ? 'text-danger' : 'text-muted-foreground'}`}>
               <CalendarClock className="size-3" />
               {rel.label}
             </span>

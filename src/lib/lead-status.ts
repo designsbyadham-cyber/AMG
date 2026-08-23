@@ -19,18 +19,18 @@ export const LEAD_STATUS_META: Record<
 > = {
   cold: {
     label: 'Cold',
-    badge: 'bg-blue-500/10 text-blue-500',
-    active: 'border-blue-500 bg-blue-500/15 text-blue-500',
+    badge: 'bg-muted text-muted-foreground',
+    active: 'border-border bg-muted text-foreground',
   },
   warm: {
     label: 'Warm',
-    badge: 'bg-amber-500/10 text-amber-500',
-    active: 'border-amber-500 bg-amber-500/15 text-amber-500',
+    badge: 'bg-accent text-foreground',
+    active: 'border-foreground/25 bg-accent text-foreground',
   },
   hot: {
     label: 'Hot',
-    badge: 'bg-red-500/10 text-red-500',
-    active: 'border-red-500 bg-red-500/15 text-red-500',
+    badge: 'bg-primary-soft text-primary',
+    active: 'border-primary bg-primary-soft text-primary',
   },
 };
 

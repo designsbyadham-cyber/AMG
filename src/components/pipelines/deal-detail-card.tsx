@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Deal } from '@/types';
-import { SERVICE_TYPE_COLORS, getServiceTypes } from '@/lib/services';
+import { SERVICE_CHIP_CLASS, getServiceTypes } from '@/lib/services';
 import {
   Dialog,
   DialogContent,
@@ -128,7 +128,7 @@ export function DealDetailCard({
                     {getServiceTypes(c).map((s) => (
                       <span
                         key={s}
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SERVICE_TYPE_COLORS[s] ?? 'bg-muted text-muted-foreground'}`}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SERVICE_CHIP_CLASS}`}
                       >
                         {s}
                       </span>

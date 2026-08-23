@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Contact } from '@/types';
-import { SERVICE_TYPE_COLORS, getServiceTypes } from '@/lib/services';
+import { SERVICE_CHIP_CLASS, getServiceTypes } from '@/lib/services';
 import { LEAD_STATUS_META } from '@/lib/lead-status';
 import {
   CONTACT_STATUS_META,
@@ -155,7 +155,7 @@ export function CallLogModal({ open, onOpenChange, contact, onSaved }: CallLogMo
                   {services.map((s) => (
                     <span
                       key={s}
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SERVICE_TYPE_COLORS[s] ?? 'bg-muted text-muted-foreground'}`}
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SERVICE_CHIP_CLASS}`}
                     >
                       {s}
                     </span>
@@ -186,7 +186,7 @@ export function CallLogModal({ open, onOpenChange, contact, onSaved }: CallLogMo
                 onClick={() => chooseOutcome('answered')}
                 className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
                   outcome === 'answered'
-                    ? 'border-emerald-500 bg-emerald-500/15 text-emerald-500'
+                    ? 'border-success bg-success-soft text-success'
                     : 'border-border bg-muted text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -198,7 +198,7 @@ export function CallLogModal({ open, onOpenChange, contact, onSaved }: CallLogMo
                 onClick={() => chooseOutcome('no_answer')}
                 className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
                   outcome === 'no_answer'
-                    ? 'border-red-500 bg-red-500/15 text-red-500'
+                    ? 'border-danger bg-danger-soft text-danger'
                     : 'border-border bg-muted text-muted-foreground hover:text-foreground'
                 }`}
               >

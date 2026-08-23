@@ -24,11 +24,12 @@ export const THEME_IDS = [
 
 export type ThemeId = (typeof THEME_IDS)[number];
 
-// Dark violet is the brand default. The server, first paint, and any
-// visitor without a saved preference all use this, so the dark UI
-// (incl. bg-card job cards) renders correctly instead of flashing the
-// light "sunlight" theme (white cards) before the client settles.
-export const DEFAULT_THEME: ThemeId = "violet";
+// Daylight is the brand default and the one `:root` mirrors in
+// globals.css, so the server, first paint, and any visitor without a
+// saved preference all agree — no flash while the client settles. A
+// workshop is a bright room; the light workspace is chosen from that
+// use scene rather than from category habit.
+export const DEFAULT_THEME: ThemeId = "sunlight";
 
 export const STORAGE_KEY = "wacrm.theme";
 
@@ -48,14 +49,14 @@ export interface ThemeMeta {
 export const THEMES: ReadonlyArray<ThemeMeta> = [
   {
     id: "sunlight",
-    name: "Sunlight",
-    tagline: "Clean & bright — light background, yellow accent, dark sidebar.",
-    swatch: "oklch(0.82 0.17 92)",
+    name: "Daylight",
+    tagline: "The default — a calm, light workspace built for a bright room.",
+    swatch: "oklch(0.52 0.14 262)",
   },
   {
     id: "violet",
     name: "Violet",
-    tagline: "The default — confident, slightly playful.",
+    tagline: "Dark and confident, slightly playful.",
     swatch: "oklch(0.526 0.247 293)",
   },
   {

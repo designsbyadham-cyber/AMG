@@ -35,10 +35,21 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-2: var(--primary-soft-2);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Semantic status colours. The only hues allowed to carry meaning:
+   * success = done, warning = needs attention soon, danger = overdue or
+   * failed. Everything else stays neutral so these actually read. */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -73,41 +84,70 @@
  * before JS runs (boot script then applies saved preference). */
 :root,
 html[data-theme="sunlight"] {
-  --background: oklch(0.97 0 0);
-  --foreground: oklch(0.13 0 0);
+  /* Daylight: the default workspace. A workshop is a bright room, so
+   * the surface is light and the ink is soft near-black rather than
+   * pure black — high contrast without the glare of #000 on #fff.
+   * One restrained indigo carries brand and interaction; every other
+   * hue is reserved for the semantic tokens below. */
+  --background: oklch(0.98 0.002 250);
+  --foreground: oklch(0.22 0.01 255);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.13 0 0);
+  --card-foreground: oklch(0.22 0.01 255);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.13 0 0);
-  --primary: oklch(0.82 0.17 92);
-  --primary-foreground: oklch(0.14 0.02 90);
-  --primary-hover: oklch(0.76 0.16 92);
-  --primary-soft: oklch(0.82 0.17 92 / 0.12);
-  --primary-soft-2: oklch(0.82 0.17 92 / 0.22);
-  --secondary: oklch(0.94 0 0);
-  --secondary-foreground: oklch(0.13 0 0);
-  --muted: oklch(0.94 0 0);
-  --muted-foreground: oklch(0.48 0 0);
-  --accent: oklch(0.94 0 0);
-  --accent-foreground: oklch(0.13 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.88 0 0);
-  --input: oklch(0.88 0 0);
-  --ring: oklch(0.82 0.17 92);
-  --chart-1: oklch(0.585 0.2 254);
-  --chart-2: oklch(0.65 0.16 220);
-  --chart-3: oklch(0.48 0.18 262);
-  --chart-4: oklch(0.72 0.13 210);
-  --chart-5: oklch(0.38 0.15 265);
+  --popover-foreground: oklch(0.22 0.01 255);
+  --primary: oklch(0.52 0.14 262);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-hover: oklch(0.46 0.14 262);
+  --primary-soft: oklch(0.52 0.14 262 / 0.1);
+  --primary-soft-2: oklch(0.52 0.14 262 / 0.18);
+  --secondary: oklch(0.96 0.003 250);
+  --secondary-foreground: oklch(0.22 0.01 255);
+  --muted: oklch(0.965 0.003 250);
+  /* 0.47 keeps secondary text at ~4.8:1 on white — above the 4.5 floor. */
+  --muted-foreground: oklch(0.47 0.012 255);
+  --accent: oklch(0.955 0.004 250);
+  --accent-foreground: oklch(0.22 0.01 255);
+  --destructive: oklch(0.55 0.18 27);
+  --border: oklch(0.92 0.004 250);
+  --input: oklch(0.9 0.004 250);
+  --ring: oklch(0.52 0.14 262);
+  --success: oklch(0.52 0.12 155);
+  --success-soft: oklch(0.52 0.12 155 / 0.12);
+  --warning: oklch(0.58 0.12 70);
+  --warning-soft: oklch(0.58 0.12 70 / 0.14);
+  --danger: oklch(0.55 0.18 27);
+  --danger-soft: oklch(0.55 0.18 27 / 0.12);
+  --chart-1: oklch(0.52 0.14 262);
+  --chart-2: oklch(0.62 0.1 240);
+  --chart-3: oklch(0.72 0.07 250);
+  --chart-4: oklch(0.82 0.04 250);
+  --chart-5: oklch(0.89 0.02 250);
   --radius: 0.625rem;
-  --sidebar: oklch(0.17 0.016 250);
-  --sidebar-foreground: oklch(0.93 0 0);
-  --sidebar-primary: oklch(0.82 0.17 92);
-  --sidebar-primary-foreground: oklch(0.14 0.02 90);
-  --sidebar-accent: oklch(0.24 0.015 250);
-  --sidebar-accent-foreground: oklch(0.93 0 0);
-  --sidebar-border: oklch(0.25 0.015 250);
-  --sidebar-ring: oklch(0.82 0.17 92);
+  /* The sidebar sits in the same light world as the page. A dark rail
+   * against a white canvas reads as two designs bolted together. */
+  --sidebar: oklch(0.965 0.004 250);
+  --sidebar-foreground: oklch(0.3 0.012 255);
+  --sidebar-primary: oklch(0.52 0.14 262);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0.006 250);
+  --sidebar-accent-foreground: oklch(0.22 0.01 255);
+  --sidebar-border: oklch(0.91 0.005 250);
+  --sidebar-ring: oklch(0.52 0.14 262);
+}
+
+/* Semantic status colours for the dark themes — same roles, lifted in
+ * lightness so they hold contrast against a dark surface. */
+html[data-theme="violet"],
+html[data-theme="emerald"],
+html[data-theme="cobalt"],
+html[data-theme="amber"],
+html[data-theme="rose"] {
+  --success: oklch(0.72 0.15 155);
+  --success-soft: oklch(0.72 0.15 155 / 0.15);
+  --warning: oklch(0.78 0.14 75);
+  --warning-soft: oklch(0.78 0.14 75 / 0.15);
+  --danger: oklch(0.68 0.19 22);
+  --danger-soft: oklch(0.68 0.19 22 / 0.15);
 }
 
 html[data-theme="violet"] {
@@ -302,8 +342,49 @@ html[data-theme="rose"] {
   }
   body {
     @apply bg-background text-foreground;
+    /* Slightly open tracking at small sizes keeps dense operational
+     * tables legible without raising the font size. */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
   html {
     @apply font-sans;
+  }
+
+  /* The surfaces we didn't draw still belong to the design: selection,
+   * caret and scrollbars ship with browser defaults otherwise. */
+  ::selection {
+    background-color: var(--primary-soft-2);
+    color: var(--foreground);
+  }
+  :where(input, textarea) {
+    caret-color: var(--primary);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--input);
+  }
+
+  /* Numbers that change (money, counts, dates) shouldn't reflow the
+   * columns they sit in. */
+  .tabular-nums,
+  table {
+    font-variant-numeric: tabular-nums;
   }
 }

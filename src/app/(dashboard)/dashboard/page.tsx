@@ -4,28 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { Contact, Deal } from '@/types';
-import { LEAD_STATUS_META } from '@/lib/lead-status';
 import { getContactStatus, relativeDay, daysAgo } from '@/lib/call-log';
-import { MetricCard } from '@/components/dashboard/metric-card';
-import { SkeletonCard } from '@/components/dashboard/skeleton';
-import {
-  Users,
-  PhoneOff,
-  CalendarClock,
-  PhoneCall,
-  Briefcase,
-  DollarSign,
-  Flame,
-  ArrowRight,
-  Clock,
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 type DashDeal = Pick<Deal, 'id' | 'value' | 'status'>;
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-AE', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'AED',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value || 0);
@@ -59,7 +46,6 @@ export default function DashboardPage() {
       if (c.lead_status) leads[c.lead_status]++;
     }
     const openDeals = deals.filter((d) => d.status !== 'won' && d.status !== 'lost');
-    const pipelineValue = openDeals.reduce((sum, d) => sum + Number(d.value || 0), 0);
 
     const followUps = contacts
       .filter((c) => getContactStatus(c) === 'follow_up')
@@ -76,7 +62,7 @@ export default function DashboardPage() {
       byStatus,
       leads,
       openJobs: openDeals.length,
-      pipelineValue,
+      pipelineValue: openDeals.reduce((sum, d) => sum + Number(d.value || 0), 0),
       followUps,
       toContact,
     };
@@ -85,135 +71,105 @@ export default function DashboardPage() {
   const loading = stats === null;
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+    <div className="mx-auto max-w-6xl space-y-10">
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Today</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Live snapshot of AMG Operations.
+          Where AMG Operations stands right now.
         </p>
-      </div>
+      </header>
 
-      {/* Primary metrics — customers + call buckets */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : (
-          <>
-            <Link href="/contacts" className="block">
-              <MetricCard
-                title="Total Customers"
-                value={stats.total.toLocaleString()}
-                icon={Users}
-                subtitle="Everyone in your list"
-              />
-            </Link>
-            <Link href="/call-log" className="block">
-              <MetricCard
-                title="To Contact"
-                value={stats.byStatus.not_contacted.toLocaleString()}
-                icon={PhoneOff}
-                subtitle="Not reached out yet"
-              />
-            </Link>
-            <Link href="/call-log" className="block">
-              <MetricCard
-                title="Follow-ups"
-                value={stats.byStatus.follow_up.toLocaleString()}
-                icon={CalendarClock}
-                subtitle="Awaiting a callback"
-              />
-            </Link>
-            <Link href="/call-log" className="block">
-              <MetricCard
-                title="Contacted"
-                value={stats.byStatus.contacted.toLocaleString()}
-                icon={PhoneCall}
-                subtitle="Reached by call or message"
-              />
-            </Link>
-          </>
-        )}
-      </div>
-
-      {/* Secondary metrics — jobs + leads */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : (
-          <>
-            <Link href="/pipelines" className="block">
-              <MetricCard
-                title="Open Jobs"
-                value={stats.openJobs.toLocaleString()}
-                icon={Briefcase}
-                subtitle="Active in the pipeline"
-              />
-            </Link>
-            <Link href="/pipelines" className="block">
-              <MetricCard
-                title="Pipeline Value"
-                value={formatCurrency(stats.pipelineValue)}
-                icon={DollarSign}
-                subtitle="Open job value"
-              />
-            </Link>
-            {/* Leads breakdown */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="flex items-start justify-between">
-                <p className="text-sm font-medium text-muted-foreground">Leads</p>
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                  <Flame className="h-4 w-4" />
-                </div>
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                {(['hot', 'warm', 'cold'] as const).map((k) => (
-                  <div
-                    key={k}
-                    className={`flex-1 rounded-lg px-2 py-2 text-center ${LEAD_STATUS_META[k].badge}`}
-                  >
-                    <p className="text-lg font-bold tabular-nums leading-none">
-                      {stats.leads[k]}
-                    </p>
-                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide">
-                      {LEAD_STATUS_META[k].label}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Actionable lists — follow-ups due + next to contact */}
-      {!loading && (stats.followUps.length > 0 || stats.toContact.length > 0) && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <AttentionList
-            title="Follow-ups due"
-            icon={<CalendarClock className="size-4 text-blue-500" />}
-            empty="No follow-ups scheduled."
-            rows={stats.followUps.map((c) => ({
-              id: c.id,
-              primary: c.name || c.phone,
-              secondary: [c.car_brand, c.car_model].filter(Boolean).join(' ') || c.phone,
-              meta: c.next_follow_up_at ? relativeDay(c.next_follow_up_at) : null,
-            }))}
+      {/* The four numbers worth acting on, as one quiet band rather than
+          four competing cards. */}
+      <section className="overflow-hidden rounded-xl border border-border bg-card">
+        <dl className="grid grid-cols-2 sm:grid-cols-4">
+          <Figure
+            label="To contact"
+            value={loading ? null : stats.byStatus.not_contacted.toLocaleString()}
+            href="/call-log"
           />
-          <AttentionList
-            title="Next to contact"
-            icon={<Clock className="size-4 text-amber-500" />}
-            empty="Everyone has been reached."
-            rows={stats.toContact.map((c) => ({
-              id: c.id,
-              primary: c.name || c.phone,
-              secondary: [c.car_brand, c.car_model].filter(Boolean).join(' ') || c.phone,
-              meta: { label: `Added ${daysAgo(c.created_at)}`, overdue: false },
-            }))}
+          <Figure
+            label="Follow-ups"
+            value={loading ? null : stats.byStatus.follow_up.toLocaleString()}
+            href="/call-log"
           />
-        </div>
+          <Figure
+            label="Open jobs"
+            value={loading ? null : stats.openJobs.toLocaleString()}
+            href="/pipelines"
+          />
+          <Figure
+            label="Pipeline value"
+            value={loading ? null : formatCurrency(stats.pipelineValue)}
+            href="/pipelines"
+          />
+        </dl>
+      </section>
+
+      {/* The work itself. */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <AttentionList
+          title="Follow-ups due"
+          empty="No follow-ups scheduled."
+          loading={loading}
+          rows={(stats?.followUps ?? []).map((c) => ({
+            id: c.id,
+            primary: c.name || c.phone,
+            secondary: [c.car_brand, c.car_model].filter(Boolean).join(' ') || c.phone,
+            meta: c.next_follow_up_at ? relativeDay(c.next_follow_up_at) : null,
+          }))}
+        />
+        <AttentionList
+          title="Next to contact"
+          empty="Everyone has been reached."
+          loading={loading}
+          rows={(stats?.toContact ?? []).map((c) => ({
+            id: c.id,
+            primary: c.name || c.phone,
+            secondary: [c.car_brand, c.car_model].filter(Boolean).join(' ') || c.phone,
+            meta: { label: `Added ${daysAgo(c.created_at)}`, overdue: false },
+          }))}
+        />
+      </div>
+
+      {/* Standing totals: true, but rarely acted on — so they sit last
+          and quiet instead of taking a card each. */}
+      {!loading && (
+        <p className="text-sm text-muted-foreground">
+          <Link href="/contacts" className="font-medium text-foreground hover:underline">
+            {stats.total.toLocaleString()} customers
+          </Link>
+          {' · '}
+          {stats.leads.hot} hot · {stats.leads.warm} warm · {stats.leads.cold} cold
+          {' · '}
+          {stats.byStatus.contacted.toLocaleString()} already contacted
+        </p>
       )}
     </div>
+  );
+}
+
+function Figure({
+  label,
+  value,
+  href,
+}: {
+  label: string;
+  value: string | null;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="border-b border-border px-5 py-4 transition-colors hover:bg-muted/50 [&:nth-child(-n+2)]:border-b sm:border-b-0 sm:border-r sm:last:border-r-0"
+    >
+      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="mt-1.5 text-2xl font-semibold tabular-nums text-foreground">
+        {value ?? <span className="inline-block h-7 w-16 animate-pulse rounded bg-muted" />}
+      </dd>
+    </Link>
   );
 }
 
@@ -226,53 +182,66 @@ interface AttentionRow {
 
 function AttentionList({
   title,
-  icon,
   empty,
   rows,
+  loading,
 }: {
   title: string;
-  icon: React.ReactNode;
   empty: string;
   rows: AttentionRow[];
+  loading: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card">
-      <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
-        {icon}
+    <section>
+      <div className="mb-3 flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold text-foreground">{title}</h2>
         <Link
           href="/call-log"
-          className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
         >
-          Call Log
+          Call log
           <ArrowRight className="size-3" />
         </Link>
       </div>
-      {rows.length === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-muted-foreground">{empty}</p>
-      ) : (
-        <div className="divide-y divide-border">
-          {rows.map((r) => (
-            <Link
-              key={r.id}
-              href="/call-log"
-              className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/40"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">{r.primary}</p>
-                <p className="truncate text-xs text-muted-foreground">{r.secondary}</p>
+
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        {loading ? (
+          <div className="divide-y divide-border">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-5 py-3.5">
+                <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+                <div className="ml-auto h-3 w-12 animate-pulse rounded bg-muted" />
               </div>
-              {r.meta && (
-                <span
-                  className={`shrink-0 text-xs font-medium ${r.meta.overdue ? 'text-red-400' : 'text-muted-foreground'}`}
-                >
-                  {r.meta.label}
-                </span>
-              )}
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-muted-foreground">{empty}</p>
+        ) : (
+          <div className="divide-y divide-border">
+            {rows.map((r) => (
+              <Link
+                key={r.id}
+                href="/call-log"
+                className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/50"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{r.primary}</p>
+                  <p className="truncate text-xs text-muted-foreground">{r.secondary}</p>
+                </div>
+                {r.meta && (
+                  <span
+                    className={`shrink-0 text-xs font-medium tabular-nums ${
+                      r.meta.overdue ? 'text-danger' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {r.meta.label}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

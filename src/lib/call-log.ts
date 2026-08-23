@@ -21,28 +21,28 @@ export const CONTACT_STATUS_META: Record<
   not_contacted: {
     label: 'To Contact',
     blurb: "Haven't reached out yet",
-    accent: '#f59e0b', // amber — needs a first call
-    badge: 'bg-amber-500/10 text-amber-500',
+    accent: 'var(--warning)',
+    badge: 'bg-warning-soft text-warning',
   },
   follow_up: {
     label: 'Follow Up',
     blurb: 'Missed call or scheduled callback',
-    accent: '#3b82f6', // blue — awaiting a callback
-    badge: 'bg-blue-500/10 text-blue-500',
+    accent: 'var(--muted-foreground)',
+    badge: 'bg-muted text-muted-foreground',
   },
   contacted: {
     label: 'Contacted',
     blurb: 'Reached by call or message',
-    accent: '#10b981', // green — done
-    badge: 'bg-emerald-500/10 text-emerald-500',
+    accent: 'var(--success)',
+    badge: 'bg-success-soft text-success',
   },
 };
 
 export type CallOutcome = 'answered' | 'no_answer';
 
 export const CALL_OUTCOME_META: Record<CallOutcome, { label: string; badge: string }> = {
-  answered: { label: 'Answered', badge: 'bg-emerald-500/10 text-emerald-500' },
-  no_answer: { label: 'No answer', badge: 'bg-red-500/10 text-red-500' },
+  answered: { label: 'Answered', badge: 'bg-success-soft text-success' },
+  no_answer: { label: 'No answer', badge: 'bg-danger-soft text-danger' },
 };
 
 /** Read a contact's bucket, defaulting to not_contacted for legacy rows. */
