@@ -118,6 +118,9 @@ export interface Contact {
   messaged?: boolean;
   /** "Contact them by" / callback date (026). */
   next_follow_up_at?: string | null;
+  /** Cached AI summary + when it was generated (030). */
+  ai_summary?: string | null;
+  ai_summary_at?: string | null;
   opt_in_status?: string | null;
   opt_in_recorded_at?: string | null;
   opt_in_source?: string | null;

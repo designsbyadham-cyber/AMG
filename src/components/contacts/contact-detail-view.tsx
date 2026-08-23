@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
-import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal } from '@/types';
+import type { Contact, Tag, ContactNote, CustomField, Deal } from '@/types';
 import { SERVICE_TYPES, getServiceTypes } from '@/lib/services';
 import { LEAD_STATUSES, LEAD_STATUS_META, type LeadStatus } from '@/lib/lead-status';
+import { ContactAiPanel } from '@/components/contacts/contact-ai-panel';
 import {
   Sheet,
   SheetContent,
@@ -20,8 +21,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Phone,
   Mail,
@@ -31,9 +30,7 @@ import {
   Loader2,
   Plus,
   Trash2,
-  Save,
-  X,
-  DollarSign,
+  Save,  DollarSign,
 } from 'lucide-react';
 
 interface ContactDetailViewProps {
@@ -646,6 +643,8 @@ export function ContactDetailView({
                     )}
                     Save Changes
                   </Button>
+
+                  <ContactAiPanel contact={contact} onUpdated={fetchContact} />
                 </div>
               </TabsContent>
 

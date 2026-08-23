@@ -141,6 +141,12 @@ export const RATE_LIMITS = {
    *  while still bounding accidental abuse from a script run in a
    *  loop or a compromised admin session spamming role flips. */
   adminAction: { limit: 30, windowMs: 60_000 },
+  /** AI generation (authed, per-user). The upstream free tier allows
+   *  ~30 requests/min for the whole organisation, so this caps a single
+   *  user at 10/min — enough to work through customers one at a time,
+   *  while leaving headroom for teammates instead of letting one person
+   *  exhaust the shared budget by holding down "Regenerate". */
+  ai: { limit: 10, windowMs: 60_000 },
 } as const;
 
 /** Test-only helper. Clears the in-memory state so unit tests don't
