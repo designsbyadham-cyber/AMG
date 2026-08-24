@@ -59,7 +59,7 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
     >
       <div className="flex flex-col gap-3">
         <div className="relative">
-          <div className="aspect-[16/10] overflow-hidden rounded-lg bg-muted">
+          <div className="aspect-[16/10] max-h-40 overflow-hidden rounded-lg bg-muted">
             {photo ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img

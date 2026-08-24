@@ -97,9 +97,16 @@ export function DealRow({
       </div>
 
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
-        {/* Photo */}
-        <div className="w-full shrink-0 md:w-28">
-          <div className="aspect-[16/9] overflow-hidden rounded-lg bg-muted md:aspect-[4/3]">
+        {/* Photo.
+
+            Sized with mutually exclusive breakpoints rather than a
+            `w-full` that `md:w-28` has to override. An override that
+            fails to load leaves the box at 100% width, and an aspect
+            ratio then turns that into a ~700px-tall grey slab that eats
+            the page. `max-h` is a second belt: whatever happens to the
+            width, the box cannot run away vertically. */}
+        <div className="shrink-0 max-md:w-full md:w-28">
+          <div className="overflow-hidden rounded-lg bg-muted max-md:aspect-[16/9] max-md:max-h-48 md:h-20 md:w-28">
             {photo ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
