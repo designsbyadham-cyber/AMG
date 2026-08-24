@@ -127,12 +127,13 @@ html[data-theme="sunlight"] {
   --chart-4: oklch(0.82 0.04 250);
   --chart-5: oklch(0.89 0.02 250);
   --radius: 0.625rem;
-  /* The nav is a white panel floating inside a deep rail, so `--sidebar`
-   * is the rail behind the panel, not the panel itself (the panel takes
-   * `--card`). Violet-leaning off the brand indigo: deep enough that the
-   * white panel reads as lifted, close enough in hue that it belongs. */
-  --sidebar: oklch(0.25 0.09 280);
-  --sidebar-foreground: oklch(0.97 0.005 280);
+  /* The nav is a white panel floating inside a rail, so `--sidebar` is
+   * the rail behind the panel, not the panel itself (the panel takes
+   * `--card`). A soft periwinkle: light enough to stay quiet next to the
+   * page, tinted enough that the white panel still reads as lifted
+   * rather than as a seam. */
+  --sidebar: oklch(0.82 0.047 271);
+  --sidebar-foreground: oklch(0.3 0.012 255);
   --sidebar-primary: oklch(0.52 0.14 262);
   --sidebar-primary-foreground: oklch(0.99 0 0);
   --sidebar-accent: oklch(0.93 0.006 250);
@@ -189,11 +190,10 @@ html[data-theme="dark"] {
   --chart-3: oklch(0.62 0.08 250);
   --chart-4: oklch(0.5 0.05 252);
   --chart-5: oklch(0.38 0.03 255);
-  /* The rail sits one step darker than the page, the mirror of how
-   * it sits one step lighter in Daylight. */
-  /* Same rail-behind-panel structure as Daylight. It has to sit *below*
-   * --card (0.19) in lightness, or the panel stops reading as lifted. */
-  --sidebar: oklch(0.13 0.03 280);
+  /* Same rail-behind-panel structure as Daylight, mirrored: it has to
+   * sit *below* --card (0.19) in lightness, or the panel stops reading
+   * as lifted. Same periwinkle hue, carried down into the dark. */
+  --sidebar: oklch(0.14 0.022 271);
   --sidebar-foreground: oklch(0.9 0.006 262);
   --sidebar-primary: oklch(0.68 0.15 262);
   --sidebar-primary-foreground: oklch(0.16 0.02 262);
