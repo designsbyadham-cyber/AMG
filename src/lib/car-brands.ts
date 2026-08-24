@@ -37,8 +37,17 @@ export const CAR_BRANDS: readonly CarBrand[] = [
   {
     id: 'mercedes-benz',
     name: 'Mercedes-Benz',
-    aliases: ['mercedes', 'merc', 'benz', 'mercedes benz', 'amg', 'mb'],
+    aliases: ['mercedes', 'merc', 'benz', 'mercedes benz', 'mb'],
     models: ['g63', 'g class', 'g wagon', 's class', 'e class', 'c class', 'a class', 'gle', 'gla', 'glc', 'gls', 'maybach', 'sprinter', 'sl', 'sel', 'sec'],
+  },
+  {
+    id: 'mercedes-amg',
+    name: 'Mercedes-AMG',
+    // 'amg' moved here off Mercedes-Benz. A row that leads with the
+    // sub-brand means the sub-brand; one that says "Mercedes ... AMG"
+    // still resolves to Mercedes-Benz, because position decides.
+    aliases: ['amg', 'mercedes amg'],
+    models: [],
   },
   { id: 'bmw', name: 'BMW', aliases: ['bimmer', 'beemer'], models: ['x5', 'x6', 'm3', 'm4', 'm5', 'i8', 'z3', 'z4'] },
   {
@@ -115,6 +124,14 @@ export const CAR_BRANDS: readonly CarBrand[] = [
   { id: 'rivian', name: 'Rivian', aliases: [], models: [] },
   { id: 'pagani', name: 'Pagani', aliases: [], models: ['huayra'] },
   { id: 'koenigsegg', name: 'Koenigsegg', aliases: [], models: [] },
+  { id: 'brabus', name: 'Brabus', aliases: [], models: [] },
+  { id: 'dacia', name: 'Dacia', aliases: [], models: [] },
+  { id: 'mercury', name: 'Mercury', aliases: [], models: [] },
+  // Two-wheelers. The imported data already contains an 'electric bike',
+  // so the shop clearly sees more than cars.
+  { id: 'kawasaki', name: 'Kawasaki', aliases: [], models: ['ninja', 'z900', 'zx10r'] },
+  { id: 'yamaha', name: 'Yamaha', aliases: [], models: ['mt 07', 'mt 09', 'r1', 'r6'] },
+  { id: 'ktm', name: 'KTM', aliases: [], models: ['duke'] },
   // SEAT ships a logo and can be picked by hand, but it is deliberately
   // excluded from the matcher below: this is an interior-upgrades shop,
   // so "seat covers" and "leather seats" would all become SEATs.
@@ -216,4 +233,27 @@ export function brandInitials(name: string): string {
   if (words.length === 0) return '?';
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+/**
+ * Brands whose logo is a vendor-supplied SVG. Everything else falls back
+ * to the PNG set.
+ *
+ * A flag per catalog entry would drift the moment someone adds a brand
+ * and forgets it, so this is one list — and `car-brands.test.ts` asserts
+ * that the file each brand resolves to actually exists on disk, which is
+ * what stops the drift rather than discipline.
+ */
+const SVG_LOGOS = new Set([
+  'acura', 'audi', 'bmw', 'brabus', 'bugatti', 'byd', 'citroen', 'dacia',
+  'dodge', 'ferrari', 'fiat', 'ford', 'gmc', 'honda', 'hummer', 'infiniti',
+  'jeep', 'kawasaki', 'kia', 'ktm', 'lamborghini', 'land-rover', 'lexus',
+  'mazda', 'mercedes-amg', 'mercedes-benz', 'mercury', 'mini', 'mitsubishi',
+  'nissan', 'opel', 'pagani', 'porsche', 'rolls-royce', 'skoda', 'subaru',
+  'suzuki', 'tesla', 'volvo', 'yamaha',
+]);
+
+/** Public path to a brand's logo, extension included. */
+export function brandLogoSrc(brand: CarBrand): string {
+  return `/brands/${brand.id}.${SVG_LOGOS.has(brand.id) ? 'svg' : 'png'}`;
 }

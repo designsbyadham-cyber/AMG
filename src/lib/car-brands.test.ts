@@ -4,6 +4,7 @@ import {
   CAR_BRANDS,
   brandForContact,
   brandInitials,
+  brandLogoSrc,
   detectBrand,
   findBrand,
 } from './car-brands';
@@ -171,9 +172,28 @@ describe('logo assets', () => {
     // A missing file degrades silently to initials in the UI, which is
     // easy to ship and hard to notice. Catch it here instead.
     const { existsSync } = await import('node:fs');
+    // Resolved through brandLogoSrc, so a brand added without its
+    // SVG_LOGOS entry fails here rather than silently falling back to
+    // initials in the UI.
     const missing = CAR_BRANDS.filter(
-      (b) => !existsSync(`public/brands/${b.id}.png`),
+      (b) => !existsSync(`public${brandLogoSrc(b)}`),
     ).map((b) => b.id);
     expect(missing).toEqual([]);
+  });
+});
+
+describe('supplied logo set', () => {
+  it('treats AMG as its own marque without stealing Mercedes rows', () => {
+    expect(detectBrand('AMG GT')?.id).toBe('mercedes-amg');
+    // Position still decides: a row led by "Mercedes" is a Mercedes.
+    expect(detectBrand('Mercedes G 320 and G63')?.id).toBe('mercedes-benz');
+    expect(detectBrand('g63 wagon 2013')?.id).toBe('mercedes-benz');
+  });
+
+  it('knows the two-wheel marques that came with the logo set', () => {
+    expect(detectBrand('Kawasaki Ninja')?.name).toBe('Kawasaki');
+    expect(detectBrand('yamaha r1')?.name).toBe('Yamaha');
+    expect(detectBrand('KTM duke 390')?.name).toBe('KTM');
+    expect(detectBrand('Brabus G800')?.name).toBe('Brabus');
   });
 });

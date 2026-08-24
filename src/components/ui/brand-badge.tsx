@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Car } from 'lucide-react';
 
-import { brandInitials, type CarBrand } from '@/lib/car-brands';
+import { brandInitials, brandLogoSrc, type CarBrand } from '@/lib/car-brands';
 import { cn } from '@/lib/utils';
 
 /**
@@ -55,14 +55,14 @@ export function BrandBadge({
       {showLogo ? (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
-          src={`/brands/${brand.id}.png`}
+          src={brandLogoSrc(brand)}
           alt={brand.name}
           width={size}
           height={size}
           loading="lazy"
           // A missing file must degrade to initials, not a broken image.
           onError={() => setFailed(true)}
-          className="h-full w-full object-contain p-1"
+          className="h-full w-full object-contain p-0.5"
         />
       ) : brand ? (
         <span
