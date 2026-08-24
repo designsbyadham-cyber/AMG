@@ -48,6 +48,9 @@ export function DealDetailCard({
   const [startDate, setStartDate] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [saving, setSaving] = useState(false);
+  // Set when "Edit Full Details" is pressed, consumed once this dialog
+  // has finished closing. See onOpenChangeComplete below.
+  const [pendingEdit, setPendingEdit] = useState(false);
 
   // Sync local editable fields from the deal each time the modal opens.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -92,7 +95,20 @@ export function DealDetailCard({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      onOpenChangeComplete={(isOpen) => {
+        // Hand off to the edit panel in sequence rather than swapping
+        // both in one commit: base-ui keeps a closing dialog mounted
+        // through its exit animation, and its backdrop then sits on top
+        // of a panel opened in the same frame — a blurred, empty screen.
+        if (!isOpen && pendingEdit) {
+          setPendingEdit(false);
+          onEdit(deal);
+        }
+      }}
+    >
       <DialogContent className="bg-card border-border text-foreground overflow-y-auto max-h-[90vh] sm:max-w-md max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:max-w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-h-[88vh] max-sm:rounded-b-none max-sm:rounded-t-2xl">
         <DialogHeader>
           <DialogTitle className="text-foreground">{deal.title}</DialogTitle>
@@ -270,8 +286,8 @@ export function DealDetailCard({
           <Button
             variant="outline"
             onClick={() => {
+              setPendingEdit(true);
               onOpenChange(false);
-              onEdit(deal);
             }}
           >
             Edit Full Details

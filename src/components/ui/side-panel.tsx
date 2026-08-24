@@ -127,7 +127,9 @@ function SidePanelContent({
           'lg:w-[var(--panel-width)]',
           // Slide, no fade-to-blur. Exponential ease-out so it settles
           // rather than stopping.
-          'transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+          // Explicit resting transform: the open state must not depend on an
+          // attribute being removed, only the entry/exit offsets should.
+          'translate-x-0 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
           'data-ending-style:translate-x-full data-starting-style:translate-x-full',
           'motion-reduce:transition-none',
           className,
