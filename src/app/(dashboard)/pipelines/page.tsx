@@ -64,8 +64,6 @@ export default function PipelinesPage() {
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
-  // user_id → display name, so each card can show who added the job.
-  const [creatorNames, setCreatorNames] = useState<Record<string, string>>({});
   // Vertical job log by default; the drag-and-drop board stays available
   // for moving jobs between stages.
   const [view, setView] = useState<"list" | "board">("list");
@@ -198,7 +196,6 @@ export default function PipelinesPage() {
     if (!selectedPipelineId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setStages([]);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDeals([]);
       return;
     }
@@ -216,26 +213,6 @@ export default function PipelinesPage() {
       cancelled = true;
     };
   }, [selectedPipelineId, loadStages, loadDeals]);
-
-  // Account members, for the card's "Added By" row. RLS scopes this to
-  // the caller's account, so it's just the team roster.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, email");
-      if (cancelled || !data) return;
-      const map: Record<string, string> = {};
-      for (const p of data) {
-        map[p.user_id] = p.full_name || p.email || "Unknown";
-      }
-      setCreatorNames(map);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase]);
 
   const refreshPipelines = useCallback(async () => {
     const list = await loadPipelines();
@@ -398,7 +375,7 @@ export default function PipelinesPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
         <div className="flex items-center justify-between">
           <div className="h-8 w-48 animate-pulse rounded bg-muted" />
           <div className="h-9 w-28 animate-pulse rounded-lg bg-muted" />
@@ -413,7 +390,7 @@ export default function PipelinesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -540,7 +517,6 @@ export default function PipelinesPage() {
             <JobList
               stages={stages}
               deals={deals}
-              creatorNames={creatorNames}
               onOpenDeal={handleViewDeal}
               onAddDeal={handleAddDeal}
               onDealMoved={handleDealMoved}
@@ -549,7 +525,6 @@ export default function PipelinesPage() {
             <PipelineBoard
               stages={stages}
               deals={deals}
-              creatorNames={creatorNames}
               onDealMoved={handleDealMoved}
               onAddDeal={handleAddDeal}
               onEditDeal={handleViewDeal}

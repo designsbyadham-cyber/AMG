@@ -10,30 +10,13 @@ import {
   formatCurrency,
   formatDate,
   getDateStatus,
-  getProgress,
-  getQcState,
-  initials,
   vehicleName,
 } from "@/lib/jobs";
-import {
-  AlertTriangle,
-  Calendar,
-  Car,
-  Check,
-  CircleCheck,
-  CircleDashed,
-  Clock,
-  Eye,
-  Gauge,
-  User,
-  X,
-} from "lucide-react";
+import { AlertTriangle, Calendar, Car, Check, User, X } from "lucide-react";
 
 interface DealRowProps {
   deal: Deal;
   stage: PipelineStage | null;
-  stages: PipelineStage[];
-  addedBy?: string | null;
   onOpen: (deal: Deal) => void;
   /**
    * Grip element wired to the drag listeners. Kept as a dedicated handle
@@ -48,33 +31,23 @@ interface DealRowProps {
 /**
  * A job in the log.
  *
- * Two shapes from one DOM tree:
- *  - **Mobile** stacks into a card — big hero photo, then the facts in
- *    priority order (identity → status → money/dates → people). The
- *    `order-*` utilities drive that sequence; `contents` on the middle
- *    wrapper lets its children take part in the same flex ordering.
- *  - **`md`+** lays the same blocks out horizontally: small portrait
- *    photo, three info columns, and a right rail for dates and value.
+ * Deliberately sparse. The row used to carry fourteen fields across four
+ * columns, which meant nothing was emphasised and nothing was scannable.
+ * It now answers only the three questions the log is actually read for:
+ * which car, where is it, and what is it worth. Everything else lives one
+ * click away in the job panel.
+ *
+ * Layout is an identity block with the make pinned top-right, a rule, and
+ * a footer row for status, due date and value — so the eye lands on the
+ * numbers last.
  */
-export function DealRow({
-  deal,
-  stage,
-  stages,
-  addedBy,
-  onOpen,
-  dragHandle,
-  isDragging,
-}: DealRowProps) {
+export function DealRow({ deal, stage, onOpen, dragHandle, isDragging }: DealRowProps) {
   const c = deal.contact;
   const brand = brandForContact(c);
   const headline = vehicleName(deal);
-  const showTitleAsSecondary = headline !== deal.title;
 
   const services = getServiceTypes(c);
-  const assigneeLabel = deal.assignee?.full_name || null;
   const photo = deal.image_urls?.[0] ?? null;
-  const qc = getQcState(deal, stages);
-  const progress = getProgress(deal, stages);
   const due = getDueDate(deal);
   const dueStatus = due ? getDateStatus(due, deal.status) : null;
 
@@ -89,30 +62,22 @@ export function DealRow({
           onOpen(deal);
         }
       }}
-      className={`group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md ${
+      className={`group relative w-full cursor-pointer rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-foreground/20 ${
         isDragging ? "opacity-40" : ""
       }`}
     >
-      {/* Grip floats over the photo on mobile so it doesn't eat a row of
-          its own; on md+ it sits inline at the start of the row. */}
+      {/* Grip sits top-left on mobile — the make now occupies top-right.
+          On md+ it returns inline at the start of the row. */}
       {dragHandle && (
-        <div className="absolute right-2 top-2 z-10 rounded-md bg-background/80 backdrop-blur-sm md:static md:z-auto md:bg-transparent md:backdrop-blur-none">
+        <div className="absolute left-2 top-2 z-10 rounded-md bg-background/80 backdrop-blur-sm md:static md:z-auto md:bg-transparent md:backdrop-blur-none">
           {dragHandle}
         </div>
       )}
 
-      <div className="flex flex-col gap-4 py-3 pl-4 pr-3 md:flex-row md:items-center">
-        {/* Make badge — the log is scanned down its left edge, so the
-            mark anchors there on md+. On mobile the row stacks and a
-            rail would strand it, so it floats over the hero photo the
-            way the grip already floats top-right. */}
-        <div className="absolute left-2 top-2 z-10 md:static md:z-auto md:shrink-0">
-          <BrandBadge brand={brand} size={36} />
-        </div>
-
-        {/* ── Photo — full-width hero on mobile, small portrait on md+ ── */}
-        <div className="order-1 w-full shrink-0 md:order-none md:w-24">
-          <div className="aspect-[16/10] overflow-hidden rounded-lg border border-border/60 bg-muted sm:aspect-[2/1] md:aspect-[3/4]">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:gap-4">
+        {/* Photo — full-width hero on mobile, small portrait on md+. */}
+        <div className="w-full shrink-0 md:w-20">
+          <div className="aspect-[16/9] overflow-hidden rounded-lg bg-muted sm:aspect-[3/1] md:aspect-square">
             {photo ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -123,256 +88,103 @@ export function DealRow({
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
-                <Car className="size-8 md:size-6" />
+                <Car className="size-7 md:size-6" />
               </div>
             )}
           </div>
         </div>
 
-        {/* `contents` on mobile so the three blocks below order themselves
-            against the photo and the dates rail; a real grid on md+. */}
-        <div className="contents md:grid md:min-w-0 md:flex-1 md:grid-cols-[1.4fr_1fr_1.1fr] md:gap-6">
-          {/* Identity — vehicle, customer, services */}
-          <div className="order-2 min-w-0 md:order-none">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <h3
-                className="truncate text-lg font-bold text-foreground md:text-base"
-                title={headline}
-              >
-                {headline}
-              </h3>
-              {c?.car_year && (
-                <span className="text-sm font-medium text-muted-foreground">({c.car_year})</span>
-              )}
-              {deal.status === "won" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success">
-                  <Check className="size-3" />
-                  Won
-                </span>
-              )}
-              {deal.status === "lost" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-2 py-0.5 text-[10px] font-semibold text-danger">
-                  <X className="size-3" />
-                  Lost
-                </span>
-              )}
-            </div>
-
-            {showTitleAsSecondary && (
-              <p className="mt-0.5 truncate text-xs text-muted-foreground" title={deal.title}>
-                {deal.title}
-              </p>
-            )}
-
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-              <User className="size-3.5 shrink-0" />
-              <span className="truncate">{c?.name || c?.phone || "No customer"}</span>
-            </p>
-
-            {(c?.plate_number || deal.odometer != null) && (
-              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-                {c?.plate_number && <span className="font-mono">{c.plate_number}</span>}
-                {c?.plate_number && deal.odometer != null && (
-                  <span className="text-muted-foreground/40">·</span>
+        <div className="min-w-0 flex-1">
+          {/* Identity — the make is a quiet corner mark, not a column. */}
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <h3 className="truncate text-base font-semibold text-foreground" title={headline}>
+                  {headline}
+                </h3>
+                {c?.car_year && (
+                  <span className="text-sm text-muted-foreground">{c.car_year}</span>
                 )}
-                {deal.odometer != null && (
-                  <span className="inline-flex items-center gap-1">
-                    <Gauge className="size-3" />
-                    {deal.odometer.toLocaleString()} km
+                {deal.status === "won" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success">
+                    <Check className="size-3" />
+                    Won
                   </span>
                 )}
-              </p>
-            )}
-
-            {services.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {services.map((s) => (
-                  <span
-                    key={s}
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                      SERVICE_CHIP_CLASS
-                    }`}
-                  >
-                    {s}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100 max-md:opacity-100">
-              <Eye className="size-3" />
-              View all details
-            </span>
-          </div>
-
-          {/* People — least critical, so it sinks to the bottom on mobile */}
-          <div className="order-5 min-w-0 space-y-2.5 border-t border-border/60 pt-3 md:order-none md:border-t-0 md:pt-0">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Performed By
-              </p>
-              {assigneeLabel ? (
-                <span className="mt-1 flex min-w-0 items-center gap-1.5">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
-                    {initials(assigneeLabel)}
-                  </span>
-                  <span className="truncate text-xs font-medium text-foreground">
-                    {assigneeLabel}
-                  </span>
-                </span>
-              ) : (
-                <p className="mt-1 text-xs text-muted-foreground/60">Unassigned</p>
-              )}
-            </div>
-
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Added By
-              </p>
-              {addedBy ? (
-                <span className="mt-1 flex min-w-0 items-center gap-1.5">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-foreground">
-                    {initials(addedBy)}
-                  </span>
-                  <span className="truncate text-xs font-medium text-foreground">{addedBy}</span>
-                </span>
-              ) : (
-                <p className="mt-1 text-xs text-muted-foreground/60">—</p>
-              )}
-            </div>
-          </div>
-
-          {/* Status — stage, quality check, progress */}
-          <div className="order-3 min-w-0 space-y-2.5 border-t border-border/60 pt-3 md:order-none md:border-t-0 md:pt-0">
-            <div className="flex flex-wrap items-center gap-2 md:block">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:mb-1">
-                Status
-              </p>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground">
-                <span
-                  aria-hidden
-                  className="size-1.5 rounded-full"
-                  style={{ backgroundColor: stage?.color ?? "#94a3b8" }}
-                />
-                {stage?.name ?? "No stage"}
-              </span>
-
-              {qc && (
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold md:hidden ${qc.cls}`}
-                >
-                  {qc.done ? (
-                    <CircleCheck className="size-3.5" />
-                  ) : (
-                    <CircleDashed className="size-3.5" />
-                  )}
-                  {qc.label}
-                </span>
-              )}
-            </div>
-
-            {/* On md+ the quality check gets its own labelled block; on
-                mobile it rides alongside the status pill above. */}
-            {qc && (
-              <div className="max-md:hidden">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Quality Check
-                </p>
-                <span
-                  className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${qc.cls}`}
-                >
-                  {qc.done ? (
-                    <CircleCheck className="size-3.5" />
-                  ) : (
-                    <CircleDashed className="size-3.5" />
-                  )}
-                  {qc.label}
-                </span>
-              </div>
-            )}
-
-            <div>
-              <div className="flex items-baseline justify-between gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Progress
-                </p>
-                {progress && (
-                  <span className="text-[10px] font-medium tabular-nums text-muted-foreground">
-                    {progress.step}/{progress.total}
+                {deal.status === "lost" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-2 py-0.5 text-[10px] font-semibold text-danger">
+                    <X className="size-3" />
+                    Lost
                   </span>
                 )}
               </div>
-              {progress && (
-                <div
-                  className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted"
-                  role="progressbar"
-                  aria-valuenow={progress.pct}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label={`Progress: ${stage?.name ?? "unknown stage"}`}
-                >
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${progress.pct}%`,
-                      backgroundColor: stage?.color ?? "#94a3b8",
-                    }}
-                  />
+
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <User className="size-3.5 shrink-0" />
+                <span className="truncate">{c?.name || c?.phone || "No customer"}</span>
+              </p>
+
+              {services.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {services.map((s) => (
+                    <span
+                      key={s}
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SERVICE_CHIP_CLASS}`}
+                    >
+                      {s}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
-          </div>
-        </div>
 
-        {/* ── Money + dates — a three-up stat strip on mobile, a right
-            rail on md+. Sits above "people" on mobile by design. ── */}
-        <div className="order-4 grid shrink-0 grid-cols-3 gap-3 border-t border-border/60 pt-3 md:order-none md:block md:min-w-[150px] md:space-y-2 md:border-l md:border-t-0 md:pl-5 md:pt-0 md:text-right">
-          <div>
-            <p className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <Clock className="size-3" />
-              Entry
-            </p>
-            <p className="text-sm font-bold tabular-nums text-foreground">
-              {deal.start_date ? formatDate(deal.start_date) : "—"}
-            </p>
+            <BrandBadge brand={brand} size={48} className="shrink-0 max-md:hidden" />
           </div>
 
-          <div>
-            <p className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {dueStatus === "overdue" ? (
-                <AlertTriangle className="size-3" />
-              ) : (
-                <Calendar className="size-3" />
-              )}
-              Due
-            </p>
-            {due ? (
-              <p
-                className={`text-sm font-bold tabular-nums ${
+          {/* The rule, then the numbers. */}
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground">
+              <span
+                aria-hidden
+                className="size-1.5 rounded-full"
+                style={{ backgroundColor: stage?.color ?? "#94a3b8" }}
+              />
+              {stage?.name ?? "No stage"}
+            </span>
+
+            {due && (
+              <span
+                className={`inline-flex items-center gap-1.5 text-xs font-medium tabular-nums ${
                   dueStatus === "overdue"
                     ? "text-danger"
                     : dueStatus === "today"
                       ? "text-warning"
-                      : "text-primary"
+                      : "text-muted-foreground"
                 }`}
               >
+                {dueStatus === "overdue" ? (
+                  <AlertTriangle className="size-3.5" />
+                ) : (
+                  <Calendar className="size-3.5" />
+                )}
                 {formatDate(due)}
-              </p>
-            ) : (
-              <p className="text-sm font-bold text-muted-foreground/50">—</p>
+              </span>
             )}
-          </div>
 
-          <div className="md:border-t md:border-border/60 md:pt-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Value
-            </p>
-            <p className="text-base font-bold text-foreground md:text-base">
+            <span className="ml-auto text-base font-semibold tabular-nums text-foreground">
               {formatCurrency(deal.value, deal.currency)}
-            </p>
+            </span>
           </div>
         </div>
       </div>
+
+      {/* On mobile the corner mark would collide with the hero photo, so it
+          rides in the footer instead. */}
+      <BrandBadge
+        brand={brand}
+        size={32}
+        className="absolute right-3 top-3 md:hidden"
+      />
     </div>
   );
 }

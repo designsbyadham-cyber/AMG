@@ -25,7 +25,6 @@ import { Search, ClipboardList, Plus, GripVertical } from "lucide-react";
 interface JobListProps {
   stages: PipelineStage[];
   deals: Deal[];
-  creatorNames?: Record<string, string>;
   onOpenDeal: (deal: Deal) => void;
   onAddDeal: (stageId?: string) => void;
   onDealMoved: (dealId: string, newStageId: string) => void;
@@ -44,7 +43,6 @@ interface JobListProps {
 export function JobList({
   stages,
   deals,
-  creatorNames,
   onOpenDeal,
   onAddDeal,
   onDealMoved,
@@ -159,7 +157,7 @@ export function JobList({
           onClick={() => setStageFilter("all")}
           className={`shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
             stageFilter === "all"
-              ? "border-primary bg-primary text-primary-foreground"
+              ? "border-foreground bg-foreground text-background"
               : "border-border bg-card text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -175,15 +173,10 @@ export function JobList({
               onClick={() => setStageFilter(s.id)}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
                 active
-                  ? "border-primary bg-primary text-primary-foreground"
+                  ? "border-foreground bg-foreground text-background"
                   : "border-border bg-card text-muted-foreground hover:text-foreground"
               }`}
             >
-              <span
-                aria-hidden
-                className="size-2 rounded-full"
-                style={{ backgroundColor: s.color }}
-              />
               {s.name}
               <span className={active ? "opacity-80" : "text-muted-foreground/60"}>
                 {count}
@@ -221,14 +214,12 @@ export function JobList({
           onDragCancel={() => setActiveDealId(null)}
         >
           {/* Stage sections stacked vertically */}
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-8">
             {visibleStages.map((stage) => (
               <StageSection
                 key={stage.id}
                 stage={stage}
-                stages={sortedStages}
                 deals={dealsByStage.get(stage.id) ?? []}
-                creatorNames={creatorNames}
                 onOpenDeal={onOpenDeal}
                 onAddDeal={onAddDeal}
               />
@@ -241,8 +232,6 @@ export function JobList({
                 <DealRow
                   deal={activeDeal}
                   stage={stageById.get(activeDeal.stage_id) ?? null}
-                  stages={sortedStages}
-                  addedBy={creatorNames?.[activeDeal.user_id] ?? null}
                   onOpen={() => {}}
                 />
               </div>
@@ -256,16 +245,12 @@ export function JobList({
 
 function StageSection({
   stage,
-  stages,
   deals,
-  creatorNames,
   onOpenDeal,
   onAddDeal,
 }: {
   stage: PipelineStage;
-  stages: PipelineStage[];
   deals: Deal[];
-  creatorNames?: Record<string, string>;
   onOpenDeal: (deal: Deal) => void;
   onAddDeal: (stageId?: string) => void;
 }) {
@@ -275,7 +260,7 @@ function StageSection({
   return (
     <section>
       {/* Stage header — the status label for everything beneath it */}
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-3 flex items-center gap-2">
         <span
           aria-hidden
           className="size-2.5 shrink-0 rounded-full"
@@ -294,7 +279,7 @@ function StageSection({
 
       <div
         ref={setNodeRef}
-        className={`flex flex-col gap-3 rounded-xl transition-all ${
+        className={`flex flex-col gap-2 rounded-xl transition-all ${
           isOver
             ? "bg-primary/5 outline outline-2 outline-dashed outline-primary outline-offset-4"
             : ""
@@ -321,8 +306,6 @@ function StageSection({
               key={deal.id}
               deal={deal}
               stage={stage}
-              stages={stages}
-              addedBy={creatorNames?.[deal.user_id] ?? null}
               onOpen={onOpenDeal}
             />
           ))
@@ -335,14 +318,10 @@ function StageSection({
 function DraggableDealRow({
   deal,
   stage,
-  stages,
-  addedBy,
   onOpen,
 }: {
   deal: Deal;
   stage: PipelineStage;
-  stages: PipelineStage[];
-  addedBy?: string | null;
   onOpen: (deal: Deal) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -370,8 +349,6 @@ function DraggableDealRow({
     <DealRow
       deal={deal}
       stage={stage}
-      stages={stages}
-      addedBy={addedBy}
       onOpen={onOpen}
       dragHandle={handle}
       isDragging={isDragging}

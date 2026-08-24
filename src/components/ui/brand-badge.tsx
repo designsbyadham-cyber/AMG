@@ -23,10 +23,21 @@ interface BrandBadgeProps {
   brand: CarBrand | null;
   /** Rendered box in px. */
   size?: number;
+  /**
+   * Draw a hairline around the chip. Off by default: on a white card the
+   * chip is invisible anyway, so the ring only ever reads as a box drawn
+   * around the mark.
+   */
+  bordered?: boolean;
   className?: string;
 }
 
-export function BrandBadge({ brand, size = 36, className }: BrandBadgeProps) {
+export function BrandBadge({
+  brand,
+  size = 36,
+  bordered = false,
+  className,
+}: BrandBadgeProps) {
   const [failed, setFailed] = useState(false);
   const showLogo = brand !== null && !failed;
 
@@ -34,7 +45,8 @@ export function BrandBadge({ brand, size = 36, className }: BrandBadgeProps) {
     <span
       className={cn(
         'inline-grid shrink-0 place-items-center overflow-hidden rounded-lg',
-        'bg-white ring-1 ring-inset ring-black/10',
+        'bg-white',
+        bordered && 'ring-1 ring-inset ring-black/10',
         className,
       )}
       style={{ width: size, height: size }}
