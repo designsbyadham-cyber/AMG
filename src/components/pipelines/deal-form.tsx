@@ -7,11 +7,11 @@ import type { Contact, Deal, DealStatus, PipelineStage, Profile } from "@/types"
 import { SERVICE_TYPES } from "@/lib/services";
 import { JobPhotoUpload } from "@/components/pipelines/job-photo-upload";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  SidePanel,
+  SidePanelContent,
+  SidePanelHeader,
+  SidePanelTitle,
+} from "@/components/ui/side-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -397,17 +397,14 @@ export function DealForm({
     "h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary";
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="bg-card border-border text-foreground sm:max-w-xl w-full p-0 max-sm:!w-full"
-      >
+    <SidePanel open={open} onOpenChange={onOpenChange} width="lg">
+      <SidePanelContent>
         <div className="flex h-full flex-col">
-          <SheetHeader className="border-b border-border p-4">
-            <SheetTitle className="text-foreground">
+          <SidePanelHeader>
+            <SidePanelTitle>
               {deal ? "Edit Job" : "New Job Intake"}
-            </SheetTitle>
-          </SheetHeader>
+            </SidePanelTitle>
+          </SidePanelHeader>
 
           <div className="flex-1 space-y-4 overflow-y-auto bg-muted/20 p-4">
             {/* Photos card */}
@@ -672,7 +669,7 @@ export function DealForm({
               ))}
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </SidePanelContent>
+    </SidePanel>
   );
 }

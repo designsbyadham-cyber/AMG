@@ -388,3 +388,27 @@ html[data-theme="rose"] {
     font-variant-numeric: tabular-nums;
   }
 }
+@layer components {
+  /* Side panels make room instead of covering up.
+   *
+   * An open <SidePanel> writes its width to `--panel-inset` on the root
+   * element; the shell's content column reads it here and yields that
+   * much horizontal space, so the panel slides into a gap rather than
+   * over a blurred page. Below lg there is nothing to give up, so the
+   * panel overlays and this rule stays inert. */
+  .panel-host {
+    transition: margin-inline-end 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  @media (min-width: 1024px) {
+    .panel-host {
+      margin-inline-end: var(--panel-inset, 0rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-host {
+      transition: none;
+    }
+  }
+}

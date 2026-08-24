@@ -45,7 +45,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           confirmation redirect dropped their token. Inert otherwise. */}
       <PendingInviteResume />
       <Sidebar open={sidebarOpen} onClose={closeSidebar} />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="panel-host flex flex-1 flex-col overflow-hidden">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
         {/* Thinner horizontal padding on mobile so cards have room to breathe. */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>

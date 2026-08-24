@@ -61,13 +61,13 @@ import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  SidePanel,
+  SidePanelContent,
+  SidePanelDescription,
+  SidePanelFooter,
+  SidePanelHeader,
+  SidePanelTitle,
+} from "@/components/ui/side-panel";
 import {
   applyEdgeConnection,
   deriveCanvasEdges,
@@ -545,26 +545,23 @@ function NodeEditSheet({
   onDelete: () => void;
   onSetEntry: () => void;
 }) {
-  // Sheet is controlled — opens when a node is selected, closes via
-  // Esc / overlay / close button (all delegated to onClose).
+  // Controlled — opens when a node is selected, closes via Esc or the
+  // header close button (both delegated to onClose).
   const open = node !== null;
   if (!node) {
     return (
-      <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-        <SheetContent side="right" className="w-full sm:max-w-md" />
-      </Sheet>
+      <SidePanel open={open} onOpenChange={(v) => !v && onClose()} width="sm">
+        <SidePanelContent />
+      </SidePanel>
     );
   }
   const meta = NODE_META[node.node_type];
   const Icon = meta.icon;
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 border-l border-border bg-background p-0 sm:max-w-md"
-      >
-        <SheetHeader className="border-b border-border px-5 py-4">
-          <SheetTitle className="flex items-center gap-2 text-foreground">
+    <SidePanel open={open} onOpenChange={(v) => !v && onClose()} width="sm">
+      <SidePanelContent className="gap-0 bg-background">
+        <SidePanelHeader>
+          <SidePanelTitle className="flex items-center gap-2">
             <Icon className={cn("h-4 w-4 shrink-0", meta.color)} />
             <span>{meta.label}</span>
             {isEntry && (
@@ -572,11 +569,11 @@ function NodeEditSheet({
                 Entry
               </span>
             )}
-          </SheetTitle>
-          <SheetDescription className="font-mono text-[11px] text-muted-foreground">
+          </SidePanelTitle>
+          <SidePanelDescription className="font-mono text-[11px]">
             {node.node_key}
-          </SheetDescription>
-        </SheetHeader>
+          </SidePanelDescription>
+        </SidePanelHeader>
 
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
           <NodeConfigForm
@@ -587,7 +584,7 @@ function NodeEditSheet({
           />
         </div>
 
-        <SheetFooter className="border-t border-border px-5 py-3 sm:flex-row sm:justify-between">
+        <SidePanelFooter className="justify-between">
           {!isEntry ? (
             <Button variant="ghost" size="sm" onClick={onSetEntry}>
               Set as entry
@@ -604,9 +601,9 @@ function NodeEditSheet({
             <Trash2 className="h-3.5 w-3.5" />
             Delete node
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </SidePanelFooter>
+      </SidePanelContent>
+    </SidePanel>
   );
 }
 

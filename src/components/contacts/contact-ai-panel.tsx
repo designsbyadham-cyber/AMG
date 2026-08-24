@@ -8,6 +8,7 @@ import { scoreContact } from '@/lib/ai/profile-score';
 import { getServiceTypes } from '@/lib/services';
 import { LEAD_STATUS_META, type LeadStatus } from '@/lib/lead-status';
 import { Button } from '@/components/ui/button';
+import { ScoreGauge } from '@/components/ui/score-gauge';
 import { Loader2, Sparkles, Check, RefreshCw } from 'lucide-react';
 
 interface CleanupSuggestion {
@@ -25,6 +26,12 @@ interface ContactAiPanelProps {
 
 /** Which suggested fields the user has ticked. */
 type Picked = Record<string, boolean>;
+
+const BAND_CAPTION = {
+  strong: 'Complete',
+  partial: 'Partial',
+  thin: 'Sparse',
+} as const;
 
 export function ContactAiPanel({ contact, onUpdated }: ContactAiPanelProps) {
   const supabase = createClient();
@@ -114,196 +121,155 @@ export function ContactAiPanel({ contact, onUpdated }: ContactAiPanelProps) {
   }
 
   const currentServices = getServiceTypes(contact);
+  const canTidy = Boolean(contact.job_description) && !notConfigured;
 
   return (
-    <div className="space-y-4 border-t border-border pt-4">
-      {/* ── Profile strength — always available, no AI call ─────────── */}
-      <section className="space-y-2">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Profile strength
-          </p>
-          <span className="text-sm font-semibold tabular-nums text-foreground">
-            {strength.score}%
-          </span>
-        </div>
+    <section className="space-y-5">
+      {/* ── Profile strength — deterministic, no AI call ─────────────── */}
+      <div className="flex items-center gap-4">
+        <ScoreGauge
+          value={strength.score}
+          band={strength.band}
+          caption={BAND_CAPTION[strength.band]}
+          size={92}
+          label="How complete this customer record is"
+        />
 
-        <div
-          className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
-          role="progressbar"
-          aria-valuenow={strength.score}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="How complete this customer record is"
-        >
-          <div
-            className={`h-full rounded-full transition-all ${
-              strength.band === 'strong'
-                ? 'bg-success'
-                : strength.band === 'partial'
-                  ? 'bg-warning'
-                  : 'bg-danger'
-            }`}
-            style={{ width: `${Math.max(strength.score, 2)}%` }}
-          />
-        </div>
-
-        {strength.missing.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Everything we need is on file.
-          </p>
-        ) : (
-          <div className="space-y-1.5">
-            <p className="text-xs text-muted-foreground">
-              Missing {strength.missing.map((m) => m.label.toLowerCase()).join(', ')}. Worth
-              asking:
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <h3 className="text-sm font-semibold text-foreground">Profile strength</h3>
+          {strength.missing.length === 0 ? (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Everything we need to quote this job is on file.
             </p>
-            <ul className="space-y-1">
+          ) : (
+            /* The old copy listed the gaps and then asked the same
+               questions underneath. The questions alone carry both. */
+            <ul className="space-y-1 text-xs leading-relaxed text-muted-foreground">
               {strength.missing.slice(0, 3).map((m) => (
-                <li key={m.field} className="flex gap-2 text-xs text-foreground">
-                  <span aria-hidden className="text-muted-foreground">
-                    •
-                  </span>
-                  {m.ask}
-                </li>
+                <li key={m.field}>{m.ask}</li>
               ))}
             </ul>
-          </div>
-        )}
-      </section>
-
-      {/* ── AI summary ─────────────────────────────────────────────── */}
-      <section className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Summary
-          </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSummary}
-            disabled={summaryLoading || notConfigured}
-            className="h-7 text-xs text-muted-foreground hover:text-foreground"
-          >
-            {summaryLoading ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : summary ? (
-              <RefreshCw className="size-3.5" />
-            ) : (
-              <Sparkles className="size-3.5" />
-            )}
-            {summary ? 'Regenerate' : 'Generate'}
-          </Button>
+          )}
         </div>
+      </div>
 
-        {summary ? (
-          <p className="rounded-lg bg-muted/50 p-3 text-sm leading-relaxed text-foreground">
-            {summary}
-          </p>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            {notConfigured
-              ? 'AI is not set up yet — add a provider key to enable summaries. The profile score above works regardless.'
-              : 'Generate a short brief before you call.'}
-          </p>
-        )}
-      </section>
-
-      {/* ── Note cleanup — suggestions only, never auto-applied ─────── */}
-      {contact.job_description && (
-        <section className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Tidy up notes
-            </p>
+      {/* ── Summary ──────────────────────────────────────────────────── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-foreground">Summary</h3>
+          <div className="flex items-center gap-1">
+            {canTidy && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCleanup}
+                disabled={cleanupLoading}
+                className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                {cleanupLoading ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="size-3.5" />
+                )}
+                Tidy notes
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleCleanup}
-              disabled={cleanupLoading || notConfigured}
-              className="h-7 text-xs text-muted-foreground hover:text-foreground"
+              onClick={handleSummary}
+              disabled={summaryLoading || notConfigured}
+              className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
             >
-              {cleanupLoading ? (
+              {summaryLoading ? (
                 <Loader2 className="size-3.5 animate-spin" />
+              ) : summary ? (
+                <RefreshCw className="size-3.5" />
               ) : (
                 <Sparkles className="size-3.5" />
               )}
-              Suggest fields
+              {summary ? 'Regenerate' : 'Generate'}
             </Button>
           </div>
+        </div>
 
-          {cleanup && (
-            <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
-              {cleanup.service_types?.length ? (
-                <SuggestionRow
-                  id="service_types"
-                  label="Services"
-                  current={currentServices.join(', ') || 'none'}
-                  proposed={cleanup.service_types.join(', ')}
-                  checked={!!picked.service_types}
-                  onToggle={(v) => setPicked((p) => ({ ...p, service_types: v }))}
-                />
-              ) : null}
+        {summary ? (
+          <p className="text-sm leading-relaxed text-foreground">{summary}</p>
+        ) : (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {notConfigured
+              ? 'AI is not set up yet. Add a provider key to enable summaries; the score above works either way.'
+              : 'Generate a short brief before you call.'}
+          </p>
+        )}
+      </div>
 
-              {cleanup.lead_status ? (
-                <SuggestionRow
-                  id="lead_status"
-                  label="Lead"
-                  current={
-                    contact.lead_status ? LEAD_STATUS_META[contact.lead_status].label : 'none'
-                  }
-                  proposed={LEAD_STATUS_META[cleanup.lead_status].label}
-                  checked={!!picked.lead_status}
-                  onToggle={(v) => setPicked((p) => ({ ...p, lead_status: v }))}
-                />
-              ) : null}
+      {/* ── Note cleanup — suggestions only, never auto-applied ───────── */}
+      {cleanup && (
+        <div className="space-y-3 rounded-lg bg-muted/60 p-3">
+          <p className="text-xs font-medium text-foreground">Tick what to keep, then apply.</p>
 
-              {cleanup.job_description ? (
-                <SuggestionRow
-                  id="job_description"
-                  label="Job details"
-                  current={contact.job_description ?? 'none'}
-                  proposed={cleanup.job_description}
-                  checked={!!picked.job_description}
-                  onToggle={(v) => setPicked((p) => ({ ...p, job_description: v }))}
-                />
-              ) : null}
+          {cleanup.service_types?.length ? (
+            <SuggestionRow
+              id="service_types"
+              label="Services"
+              current={currentServices.join(', ') || 'none'}
+              proposed={cleanup.service_types.join(', ')}
+              checked={!!picked.service_types}
+              onToggle={(v) => setPicked((p) => ({ ...p, service_types: v }))}
+            />
+          ) : null}
 
-              {cleanup.next_action && (
-                <p className="border-t border-border/60 pt-2 text-xs text-muted-foreground">
-                  Suggested next step:{' '}
-                  <span className="text-foreground">{cleanup.next_action}</span>
-                </p>
-              )}
+          {cleanup.lead_status ? (
+            <SuggestionRow
+              id="lead_status"
+              label="Lead"
+              current={contact.lead_status ? LEAD_STATUS_META[contact.lead_status].label : 'none'}
+              proposed={LEAD_STATUS_META[cleanup.lead_status].label}
+              checked={!!picked.lead_status}
+              onToggle={(v) => setPicked((p) => ({ ...p, lead_status: v }))}
+            />
+          ) : null}
 
-              <div className="flex justify-end gap-2 pt-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCleanup(null)}
-                  disabled={applying}
-                >
-                  Discard
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={applyPicked}
-                  disabled={applying}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  {applying ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <Check className="size-3.5" />
-                  )}
-                  Apply selected
-                </Button>
-              </div>
-            </div>
+          {cleanup.job_description ? (
+            <SuggestionRow
+              id="job_description"
+              label="Job details"
+              current={contact.job_description ?? 'none'}
+              proposed={cleanup.job_description}
+              checked={!!picked.job_description}
+              onToggle={(v) => setPicked((p) => ({ ...p, job_description: v }))}
+            />
+          ) : null}
+
+          {cleanup.next_action && (
+            <p className="text-xs text-muted-foreground">
+              Next step: <span className="text-foreground">{cleanup.next_action}</span>
+            </p>
           )}
-        </section>
+
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={applyPicked} disabled={applying} className="h-8">
+              {applying ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Check className="size-3.5" />
+              )}
+              Apply
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCleanup(null)}
+              disabled={applying}
+              className="h-8 text-muted-foreground hover:text-foreground"
+            >
+              Discard
+            </Button>
+          </div>
+        </div>
       )}
-    </div>
+    </section>
   );
 }
 

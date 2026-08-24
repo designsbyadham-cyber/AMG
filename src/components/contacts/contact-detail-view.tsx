@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
@@ -9,12 +9,13 @@ import { SERVICE_TYPES, getServiceTypes } from '@/lib/services';
 import { LEAD_STATUSES, LEAD_STATUS_META, type LeadStatus } from '@/lib/lead-status';
 import { ContactAiPanel } from '@/components/contacts/contact-ai-panel';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet';
+  SidePanel,
+  SidePanelContent,
+  SidePanelDescription,
+  SidePanelFooter,
+  SidePanelHeader,
+  SidePanelTitle,
+} from '@/components/ui/side-panel';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,10 +28,10 @@ import {
   Building2,
   Copy,
   Check,
+  ChevronRight,
   Loader2,
   Plus,
   Trash2,
-  Save,  DollarSign,
 } from 'lucide-react';
 
 interface ContactDetailViewProps {
@@ -39,6 +40,37 @@ interface ContactDetailViewProps {
   contactId: string | null;
   onUpdated: () => void;
 }
+
+/** Shared shell for the small stacked "label above field" pattern. */
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium text-muted-foreground">
+        {label}
+        {required && <span className="ml-0.5 text-danger">*</span>}
+      </Label>
+      {children}
+    </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      {children}
+    </p>
+  );
+}
+
+const INPUT_CLASS = 'h-9 bg-muted text-sm text-foreground';
 
 export function ContactDetailView({
   open,
@@ -52,6 +84,7 @@ export function ContactDetailView({
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
+  const [tab, setTab] = useState('details');
 
   // Details tab
   const [editName, setEditName] = useState('');
@@ -68,7 +101,7 @@ export function ContactDetailView({
   const [editPlate, setEditPlate] = useState('');
   const [editServiceTypes, setEditServiceTypes] = useState<string[]>([]);
   const [editJobDescription, setEditJobDescription] = useState('');
-  const [savingDetails, setSavingDetails] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   function toggleEditService(service: string) {
     setEditServiceTypes((prev) =>
@@ -78,7 +111,7 @@ export function ContactDetailView({
     );
   }
 
-  // Tags tab
+  // Tags — folded in from their own tab. Saved on click, not on Save.
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [contactTagIds, setContactTagIds] = useState<string[]>([]);
   const [savingTags, setSavingTags] = useState(false);
@@ -89,10 +122,11 @@ export function ContactDetailView({
   const [savingNote, setSavingNote] = useState(false);
   const [loadingNotes, setLoadingNotes] = useState(false);
 
-  // Custom fields tab
+  // Custom fields — folded into Details behind a disclosure, and saved
+  // by the same Save changes button as everything else.
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
-  const [savingCustom, setSavingCustom] = useState(false);
+  const [savedCustomValues, setSavedCustomValues] = useState<Record<string, string>>({});
   const [loadingCustom, setLoadingCustom] = useState(false);
 
   // Deals tab
@@ -175,6 +209,7 @@ export function ContactDetailView({
         map[v.custom_field_id] = v.value ?? '';
       });
       setCustomValues(map);
+      setSavedCustomValues(map);
     }
     setLoadingCustom(false);
   }, [contactId, supabase]);
@@ -193,6 +228,7 @@ export function ContactDetailView({
 
   useEffect(() => {
     if (open && contactId) {
+      setTab('details');
       fetchContact();
       fetchTags();
       fetchNotes();
@@ -201,6 +237,57 @@ export function ContactDetailView({
     }
   }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchCustomFields, fetchDeals]);
 
+  const customFieldsDirty = useMemo(() => {
+    const keys = new Set([
+      ...Object.keys(customValues),
+      ...Object.keys(savedCustomValues),
+    ]);
+    return [...keys].some(
+      (k) => (customValues[k] ?? '').trim() !== (savedCustomValues[k] ?? '').trim()
+    );
+  }, [customValues, savedCustomValues]);
+
+  /**
+   * Drives the Save button. Comparing against the loaded record beats a
+   * flag flipped by every onChange: retyping the original value stops
+   * counting as a change, and a save that lands leaves nothing pending.
+   */
+  const dirty = useMemo(() => {
+    if (!contact) return false;
+    const same =
+      editName.trim() === (contact.name ?? '') &&
+      editPhone.trim() === contact.phone &&
+      editEmail.trim() === (contact.email ?? '') &&
+      editCompany.trim() === (contact.company ?? '') &&
+      editLeadStatus === (contact.lead_status ?? null) &&
+      editCarBrand.trim() === (contact.car_brand ?? '') &&
+      editCarModel.trim() === (contact.car_model ?? '') &&
+      editCarYear === (contact.car_year != null ? String(contact.car_year) : '') &&
+      editCarTrim.trim() === (contact.car_trim ?? '') &&
+      editVin.trim() === (contact.vin ?? '') &&
+      editPlate.trim() === (contact.plate_number ?? '') &&
+      editJobDescription.trim() === (contact.job_description ?? '') &&
+      editServiceTypes.slice().sort().join('|') ===
+        getServiceTypes(contact).slice().sort().join('|');
+    return !same || customFieldsDirty;
+  }, [
+    contact,
+    editName,
+    editPhone,
+    editEmail,
+    editCompany,
+    editLeadStatus,
+    editCarBrand,
+    editCarModel,
+    editCarYear,
+    editCarTrim,
+    editVin,
+    editPlate,
+    editJobDescription,
+    editServiceTypes,
+    customFieldsDirty,
+  ]);
+
   async function copyPhone() {
     if (!contact) return;
     await navigator.clipboard.writeText(contact.phone);
@@ -208,43 +295,68 @@ export function ContactDetailView({
     setTimeout(() => setCopiedPhone(false), 2000);
   }
 
-  async function saveDetails() {
+  async function saveCustomFields() {
+    if (!contactId) return;
+    // Replace wholesale: the value set is tiny, and this avoids diffing
+    // inserts against updates against deletes.
+    await supabase.from('contact_custom_values').delete().eq('contact_id', contactId);
+
+    const rows = Object.entries(customValues)
+      .filter(([, val]) => val.trim())
+      .map(([fieldId, val]) => ({
+        contact_id: contactId,
+        custom_field_id: fieldId,
+        value: val.trim(),
+      }));
+
+    if (rows.length > 0) {
+      const { error } = await supabase.from('contact_custom_values').insert(rows);
+      if (error) throw error;
+    }
+    setSavedCustomValues(customValues);
+  }
+
+  /** One Save for the whole Details tab, custom fields included. */
+  async function saveAll() {
     if (!contactId || !editPhone.trim()) {
       toast.error('Phone number is required');
       return;
     }
 
-    setSavingDetails(true);
-    const { error } = await supabase
-      .from('contacts')
-      .update({
-        name: editName.trim() || null,
-        phone: editPhone.trim(),
-        email: editEmail.trim() || null,
-        company: editCompany.trim() || null,
-        lead_status: editLeadStatus,
-        car_brand: editCarBrand.trim() || null,
-        car_model: editCarModel.trim() || null,
-        car_year: editCarYear ? parseInt(editCarYear, 10) : null,
-        car_trim: editCarTrim.trim() || null,
-        vin: editVin.trim() || null,
-        plate_number: editPlate.trim() || null,
-        service_types: editServiceTypes.length ? editServiceTypes : null,
-        // Keep the legacy single column in sync (first selection).
-        service_type: editServiceTypes[0] ?? null,
-        job_description: editJobDescription.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', contactId);
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('contacts')
+        .update({
+          name: editName.trim() || null,
+          phone: editPhone.trim(),
+          email: editEmail.trim() || null,
+          company: editCompany.trim() || null,
+          lead_status: editLeadStatus,
+          car_brand: editCarBrand.trim() || null,
+          car_model: editCarModel.trim() || null,
+          car_year: editCarYear ? parseInt(editCarYear, 10) : null,
+          car_trim: editCarTrim.trim() || null,
+          vin: editVin.trim() || null,
+          plate_number: editPlate.trim() || null,
+          service_types: editServiceTypes.length ? editServiceTypes : null,
+          // Keep the legacy single column in sync (first selection).
+          service_type: editServiceTypes[0] ?? null,
+          job_description: editJobDescription.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', contactId);
 
-    if (error) {
-      toast.error('Failed to update contact');
-    } else {
-      toast.success('Contact updated');
+      if (error) throw error;
+      if (customFieldsDirty) await saveCustomFields();
+
+      toast.success('Changes saved');
       fetchContact();
       onUpdated();
+    } catch {
+      toast.error('Could not save changes. Check your connection and try again.');
     }
-    setSavingDetails(false);
+    setSaving(false);
   }
 
   async function toggleTag(tagId: string) {
@@ -320,39 +432,6 @@ export function ContactDetailView({
     }
   }
 
-  async function saveCustomFields() {
-    if (!contactId) return;
-    setSavingCustom(true);
-
-    try {
-      // Delete existing values and re-insert
-      await supabase
-        .from('contact_custom_values')
-        .delete()
-        .eq('contact_id', contactId);
-
-      const rows = Object.entries(customValues)
-        .filter(([, val]) => val.trim())
-        .map(([fieldId, val]) => ({
-          contact_id: contactId,
-          custom_field_id: fieldId,
-          value: val.trim(),
-        }));
-
-      if (rows.length > 0) {
-        const { error } = await supabase
-          .from('contact_custom_values')
-          .insert(rows);
-        if (error) throw error;
-      }
-
-      toast.success('Custom fields saved');
-    } catch {
-      toast.error('Failed to save custom fields');
-    }
-    setSavingCustom(false);
-  }
-
   function getInitials(name?: string | null) {
     if (!name) return '?';
     return name
@@ -363,51 +442,44 @@ export function ContactDetailView({
       .slice(0, 2);
   }
 
+  const filledCustomCount = Object.values(customValues).filter((v) => v.trim()).length;
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="bg-card border-border text-foreground sm:max-w-lg w-full p-0"
-      >
+    <SidePanel open={open} onOpenChange={onOpenChange} width="md">
+      <SidePanelContent aria-label="Customer details">
         {loading || !contact ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="size-6 animate-spin text-primary" />
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="flex flex-col h-full">
-            {/* Header */}
-            <SheetHeader className="p-4 border-b border-border/50">
+          <>
+            <SidePanelHeader>
               <div className="flex items-center gap-3">
-                <Avatar className="size-12 bg-muted border border-border">
-                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                <Avatar className="size-10">
+                  <AvatarFallback className="bg-primary-soft text-sm font-semibold text-primary">
                     {getInitials(contact.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <SheetTitle className="text-foreground truncate">
-                      {contact.name || 'Unknown'}
-                    </SheetTitle>
+                    <SidePanelTitle>{contact.name || 'Unknown'}</SidePanelTitle>
                     {contact.lead_status && (
                       <span
-                        className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${LEAD_STATUS_META[contact.lead_status].badge}`}
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${LEAD_STATUS_META[contact.lead_status].badge}`}
                       >
                         {LEAD_STATUS_META[contact.lead_status].label}
                       </span>
                     )}
                   </div>
-                  <SheetDescription className="text-muted-foreground text-xs mt-0.5">
-                    Contact details
-                  </SheetDescription>
-                  <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                  <SidePanelDescription className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <button
                       onClick={copyPhone}
-                      className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                      className="flex items-center gap-1 transition-colors hover:text-foreground"
                     >
                       <Phone className="size-3" />
                       {contact.phone}
                       {copiedPhone ? (
-                        <Check className="size-3 text-primary" />
+                        <Check className="size-3 text-success" />
                       ) : (
                         <Copy className="size-3" />
                       )}
@@ -424,131 +496,118 @@ export function ContactDetailView({
                         {contact.company}
                       </span>
                     )}
-                  </div>
+                  </SidePanelDescription>
                 </div>
               </div>
-            </SheetHeader>
+            </SidePanelHeader>
 
-            {/* Tabs */}
-            <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="bg-muted/50 border-b border-border mx-4 mt-3">
-                <TabsTrigger
-                  value="details"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-                >
-                  Details
-                </TabsTrigger>
-                <TabsTrigger
-                  value="tags"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-                >
-                  Tags
-                </TabsTrigger>
-                <TabsTrigger
-                  value="notes"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-                >
-                  Notes
-                </TabsTrigger>
-                <TabsTrigger
-                  value="custom"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-                >
-                  Custom Fields
-                </TabsTrigger>
-                <TabsTrigger
-                  value="deals"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-                >
-                  Deals
-                </TabsTrigger>
+            <Tabs
+              value={tab}
+              onValueChange={(value) => setTab(String(value))}
+              className="flex min-h-0 flex-1 flex-col gap-0"
+            >
+              <TabsList
+                variant="line"
+                className="h-auto w-full justify-start gap-5 rounded-none border-b border-border px-5 py-0 group-data-horizontal/tabs:h-auto"
+              >
+                {[
+                  ['details', 'Details'],
+                  ['notes', notes.length ? `Notes (${notes.length})` : 'Notes'],
+                  ['deals', deals.length ? `Deals (${deals.length})` : 'Deals'],
+                ].map(([value, label]) => (
+                  <TabsTrigger
+                    key={value}
+                    value={value}
+                    className="h-9 flex-none rounded-none px-0 text-sm text-muted-foreground data-active:text-foreground group-data-horizontal/tabs:after:bottom-0"
+                  >
+                    {label}
+                  </TabsTrigger>
+                ))}
               </TabsList>
 
-              {/* Details Tab */}
-              <TabsContent value="details" className="flex-1 overflow-y-auto px-4 py-3">
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">Name</Label>
-                    <Input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
+              {/* ── Details ────────────────────────────────────────── */}
+              <TabsContent value="details" className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <Field label="Name">
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="Full name"
+                        className={INPUT_CLASS}
+                      />
+                    </Field>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Phone" required>
+                        <Input
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          className={INPUT_CLASS}
+                        />
+                      </Field>
+                      <Field label="Email">
+                        <Input
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          placeholder="name@example.com"
+                          className={INPUT_CLASS}
+                        />
+                      </Field>
+                    </div>
+                    <Field label="Company">
+                      <Input
+                        value={editCompany}
+                        onChange={(e) => setEditCompany(e.target.value)}
+                        placeholder="Optional"
+                        className={INPUT_CLASS}
+                      />
+                    </Field>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">
-                      Phone <span className="text-danger">*</span>
-                    </Label>
-                    <Input
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">Email</Label>
-                    <Input
-                      value={editEmail}
-                      onChange={(e) => setEditEmail(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">Company</Label>
-                    <Input
-                      value={editCompany}
-                      onChange={(e) => setEditCompany(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">Lead Status</Label>
-                    <div className="grid grid-cols-3 gap-2">
+
+                  {/* One segmented control, not three loose buttons. */}
+                  <Field label="Lead temperature">
+                    <div className="flex w-full rounded-lg border border-border bg-muted p-0.5">
                       {LEAD_STATUSES.map((s) => {
                         const active = editLeadStatus === s;
-                        const meta = LEAD_STATUS_META[s];
                         return (
                           <button
                             key={s}
                             type="button"
+                            aria-pressed={active}
                             onClick={() => setEditLeadStatus(active ? null : s)}
-                            className={`rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
+                            className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                               active
-                                ? meta.active
-                                : 'border-border bg-muted text-muted-foreground hover:text-foreground'
+                                ? 'bg-card text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
                             }`}
                           >
-                            {meta.label}
+                            {LEAD_STATUS_META[s].label}
                           </button>
                         );
                       })}
                     </div>
-                  </div>
+                  </Field>
 
-                  {/* Vehicle Details — editable inline */}
-                  <div className="border-t border-border pt-3 space-y-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vehicle Details</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1.5">
-                        <Label className="text-muted-foreground text-xs">Car Brand</Label>
+                  <div className="space-y-3">
+                    <SectionLabel>Vehicle</SectionLabel>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Make">
                         <Input
                           value={editCarBrand}
                           onChange={(e) => setEditCarBrand(e.target.value)}
                           placeholder="Toyota"
-                          className="bg-muted border-border text-foreground h-8 text-sm"
+                          className={INPUT_CLASS}
                         />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-muted-foreground text-xs">Car Model</Label>
+                      </Field>
+                      <Field label="Model">
                         <Input
                           value={editCarModel}
                           onChange={(e) => setEditCarModel(e.target.value)}
                           placeholder="Camry"
-                          className="bg-muted border-border text-foreground h-8 text-sm"
+                          className={INPUT_CLASS}
                         />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-muted-foreground text-xs">Year</Label>
+                      </Field>
+                      <Field label="Year">
                         <Input
                           type="number"
                           min={1900}
@@ -556,188 +615,187 @@ export function ContactDetailView({
                           value={editCarYear}
                           onChange={(e) => setEditCarYear(e.target.value)}
                           placeholder="2022"
-                          className="bg-muted border-border text-foreground h-8 text-sm"
+                          className={INPUT_CLASS}
                         />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-muted-foreground text-xs">Trim / Variant</Label>
+                      </Field>
+                      <Field label="Trim">
                         <Input
                           value={editCarTrim}
                           onChange={(e) => setEditCarTrim(e.target.value)}
                           placeholder="Sport"
-                          className="bg-muted border-border text-foreground h-8 text-sm"
+                          className={INPUT_CLASS}
                         />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-muted-foreground text-xs">VIN / Chassis No.</Label>
-                        <Input
-                          value={editVin}
-                          onChange={(e) => setEditVin(e.target.value)}
-                          placeholder="1HGBH41JXMN109186"
-                          className="bg-muted border-border text-foreground h-8 text-sm font-mono"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-muted-foreground text-xs">Plate Number</Label>
+                      </Field>
+                      <Field label="Plate">
                         <Input
                           value={editPlate}
                           onChange={(e) => setEditPlate(e.target.value)}
                           placeholder="DXB A 12345"
-                          className="bg-muted border-border text-foreground h-8 text-sm font-mono"
+                          className={`${INPUT_CLASS} font-mono`}
                         />
-                      </div>
+                      </Field>
+                      <Field label="VIN">
+                        <Input
+                          value={editVin}
+                          onChange={(e) => setEditVin(e.target.value)}
+                          placeholder="1HGBH41JXMN109186"
+                          className={`${INPUT_CLASS} font-mono`}
+                        />
+                      </Field>
                     </div>
                   </div>
 
-                  {/* Service — editable multi-select */}
-                  <div className="border-t border-border pt-3 space-y-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Service</p>
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground text-xs">Service Type</Label>
-                      <p className="text-xs text-muted-foreground">Select all that apply</p>
-                      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                        {SERVICE_TYPES.map((t) => {
-                          const checked = editServiceTypes.includes(t);
-                          return (
-                            <label
-                              key={t}
-                              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
-                                checked
-                                  ? 'border-primary bg-primary/10 text-foreground'
-                                  : 'border-border bg-muted text-muted-foreground hover:text-foreground'
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleEditService(t)}
-                                className="size-4 rounded border-input text-primary focus:ring-primary"
-                              />
-                              {t}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground text-xs">Job Description</Label>
-                      <Textarea
-                        value={editJobDescription}
-                        onChange={(e) => setEditJobDescription(e.target.value)}
-                        placeholder="Describe the job in detail…"
-                        className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px] text-sm resize-none"
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={saveDetails}
-                    disabled={savingDetails}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
-                    size="sm"
-                  >
-                    {savingDetails ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Save className="size-3.5" />
-                    )}
-                    Save Changes
-                  </Button>
-
-                  <ContactAiPanel contact={contact} onUpdated={fetchContact} />
-                </div>
-              </TabsContent>
-
-              {/* Tags Tab */}
-              <TabsContent value="tags" className="flex-1 overflow-y-auto px-4 py-3">
-                <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    Click a tag to add or remove it from this contact.
-                  </p>
-                  {allTags.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No tags available. Create tags in Settings.
-                    </p>
-                  ) : (
+                  <div className="space-y-3">
+                    <SectionLabel>Service</SectionLabel>
                     <div className="flex flex-wrap gap-2">
-                      {allTags.map((tag) => {
-                        const selected = contactTagIds.includes(tag.id);
+                      {SERVICE_TYPES.map((t) => {
+                        const checked = editServiceTypes.includes(t);
                         return (
                           <button
-                            key={tag.id}
-                            onClick={() => toggleTag(tag.id)}
-                            disabled={savingTags}
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
-                              selected
-                                ? 'ring-2 ring-primary ring-offset-1 ring-offset-background'
-                                : 'opacity-50 hover:opacity-80'
+                            key={t}
+                            type="button"
+                            aria-pressed={checked}
+                            onClick={() => toggleEditService(t)}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                              checked
+                                ? 'border-primary bg-primary-soft text-primary'
+                                : 'border-border bg-muted text-muted-foreground hover:text-foreground'
                             }`}
-                            style={{
-                              backgroundColor: tag.color + '20',
-                              color: tag.color,
-                            }}
                           >
-                            {selected && <Check className="size-3 mr-1" />}
-                            {tag.name}
+                            {checked && <Check className="size-3" />}
+                            {t}
                           </button>
                         );
                       })}
                     </div>
+                    <Field label="Job description">
+                      <Textarea
+                        value={editJobDescription}
+                        onChange={(e) => setEditJobDescription(e.target.value)}
+                        placeholder="What the customer asked for, in their words"
+                        className="min-h-[72px] resize-none bg-muted text-sm text-foreground"
+                      />
+                    </Field>
+                  </div>
+
+                  {allTags.length > 0 && (
+                    <div className="space-y-3">
+                      <SectionLabel>Tags</SectionLabel>
+                      <div className="flex flex-wrap gap-2">
+                        {allTags.map((tag) => {
+                          const selected = contactTagIds.includes(tag.id);
+                          return (
+                            <button
+                              key={tag.id}
+                              onClick={() => toggleTag(tag.id)}
+                              disabled={savingTags}
+                              aria-pressed={selected}
+                              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-opacity ${
+                                selected ? '' : 'opacity-45 hover:opacity-75'
+                              }`}
+                              style={{
+                                backgroundColor: tag.color + '20',
+                                color: tag.color,
+                              }}
+                            >
+                              {selected && <Check className="size-3" />}
+                              {tag.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
+
+                  {/* Present, but out of the way until someone needs them. */}
+                  {!loadingCustom && customFields.length > 0 && (
+                    <details className="group border-t border-border pt-4">
+                      <summary className="flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">
+                        <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" />
+                        More fields
+                        {filledCustomCount > 0 && (
+                          <span className="font-normal normal-case tracking-normal">
+                            ({filledCustomCount} filled)
+                          </span>
+                        )}
+                      </summary>
+                      <div className="mt-3 space-y-3">
+                        {customFields.map((field) => (
+                          <Field key={field.id} label={field.field_name}>
+                            <Input
+                              value={customValues[field.id] ?? ''}
+                              onChange={(e) =>
+                                setCustomValues((prev) => ({
+                                  ...prev,
+                                  [field.id]: e.target.value,
+                                }))
+                              }
+                              className={`${INPUT_CLASS} capitalize`}
+                            />
+                          </Field>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+
+                  <div className="border-t border-border pt-5">
+                    <ContactAiPanel contact={contact} onUpdated={fetchContact} />
+                  </div>
                 </div>
               </TabsContent>
 
-              {/* Notes Tab */}
-              <TabsContent value="notes" className="flex-1 flex flex-col min-h-0 px-4 py-3">
-                <div className="space-y-2 mb-3">
+              {/* ── Notes ──────────────────────────────────────────── */}
+              <TabsContent value="notes" className="flex min-h-0 flex-1 flex-col px-5 py-4">
+                <div className="mb-4 space-y-2">
                   <Textarea
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     placeholder="Write a note..."
-                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px] text-sm resize-none"
+                    className="min-h-[72px] resize-none bg-muted text-sm text-foreground"
                   />
                   <Button
                     onClick={addNote}
                     disabled={!newNote.trim() || savingNote}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     size="sm"
+                    className="h-8"
                   >
                     {savingNote ? (
                       <Loader2 className="size-3.5 animate-spin" />
                     ) : (
                       <Plus className="size-3.5" />
                     )}
-                    Add Note
+                    Add note
                   </Button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-2">
+                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
                   {loadingNotes ? (
-                    <div className="flex items-center justify-center py-8">
+                    <div className="flex justify-center py-8">
                       <Loader2 className="size-5 animate-spin text-muted-foreground" />
                     </div>
                   ) : notes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      No notes yet.
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      No notes yet. The first one goes above.
                     </p>
                   ) : (
                     notes.map((note) => (
                       <div
                         key={note.id}
-                        className="rounded-lg bg-muted/50 border border-border/50 p-3 group"
+                        className="group border-b border-border pb-3 last:border-0"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm text-foreground whitespace-pre-wrap flex-1">
+                          <p className="flex-1 whitespace-pre-wrap text-sm text-foreground">
                             {note.note_text}
                           </p>
                           <button
                             onClick={() => deleteNote(note.id)}
-                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-danger transition-all cursor-pointer shrink-0"
+                            aria-label="Delete note"
+                            className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
                           >
                             <Trash2 className="size-3.5" />
                           </button>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1.5">
+                        <p className="mt-1.5 text-xs text-muted-foreground">
                           {new Date(note.created_at).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
@@ -752,75 +810,25 @@ export function ContactDetailView({
                 </div>
               </TabsContent>
 
-              {/* Custom Fields Tab */}
-              <TabsContent value="custom" className="flex-1 overflow-y-auto px-4 py-3">
-                {loadingCustom ? (
-                  <div className="flex items-center justify-center py-8">
+              {/* ── Deals ──────────────────────────────────────────── */}
+              <TabsContent value="deals" className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                {loadingDeals ? (
+                  <div className="flex justify-center py-8">
                     <Loader2 className="size-5 animate-spin text-muted-foreground" />
                   </div>
-                ) : customFields.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No custom fields defined. Create them in Settings.
+                ) : deals.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    No jobs booked for this customer yet.
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {customFields.map((field) => (
-                      <div key={field.id} className="space-y-1.5">
-                        <Label className="text-muted-foreground text-xs capitalize">
-                          {field.field_name}
-                        </Label>
-                        <Input
-                          value={customValues[field.id] ?? ''}
-                          onChange={(e) =>
-                            setCustomValues((prev) => ({
-                              ...prev,
-                              [field.id]: e.target.value,
-                            }))
-                          }
-                          placeholder={`Enter ${field.field_name}...`}
-                          className="bg-muted border-border text-foreground h-8 text-sm placeholder:text-muted-foreground"
-                        />
-                      </div>
-                    ))}
-                    <Button
-                      onClick={saveCustomFields}
-                      disabled={savingCustom}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
-                      size="sm"
-                    >
-                      {savingCustom ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Save className="size-3.5" />
-                      )}
-                      Save Custom Fields
-                    </Button>
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Deals Tab */}
-              <TabsContent value="deals" className="flex-1 overflow-y-auto px-4 py-3">
-                {loadingDeals ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="size-5 animate-spin text-primary" />
-                  </div>
-                ) : deals.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No deals yet</p>
-                ) : (
-                  <div className="space-y-2">
                     {deals.map((deal) => (
-                      <div
-                        key={deal.id}
-                        className="rounded-lg border border-border bg-muted/50 p-3"
-                      >
+                      <div key={deal.id} className="border-b border-border pb-3 last:border-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium text-foreground">
-                            {deal.title}
-                          </p>
+                          <p className="text-sm font-medium text-foreground">{deal.title}</p>
                           {deal.stage && (
                             <span
-                              className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                              className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium"
                               style={{
                                 backgroundColor: `${deal.stage.color}20`,
                                 color: deal.stage.color,
@@ -830,9 +838,8 @@ export function ContactDetailView({
                             </span>
                           )}
                         </div>
-                        <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="size-3" />
+                        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="tabular-nums">
                             {new Intl.NumberFormat('en-US', {
                               style: 'currency',
                               currency: deal.currency || 'USD',
@@ -841,11 +848,7 @@ export function ContactDetailView({
                           </span>
                           {deal.status && deal.status !== 'open' && (
                             <span
-                              className={
-                                deal.status === 'won'
-                                  ? 'text-primary'
-                                  : 'text-danger'
-                              }
+                              className={deal.status === 'won' ? 'text-success' : 'text-danger'}
                             >
                               {deal.status}
                             </span>
@@ -857,9 +860,21 @@ export function ContactDetailView({
                 )}
               </TabsContent>
             </Tabs>
-          </div>
+
+            {tab === 'details' && (
+              <SidePanelFooter className="justify-between">
+                <span aria-live="polite" className="text-xs text-muted-foreground">
+                  {dirty ? 'Unsaved changes' : 'All changes saved'}
+                </span>
+                <Button onClick={saveAll} disabled={!dirty || saving} size="sm" className="h-8">
+                  {saving && <Loader2 className="size-3.5 animate-spin" />}
+                  Save changes
+                </Button>
+              </SidePanelFooter>
+            )}
+          </>
         )}
-      </SheetContent>
-    </Sheet>
+      </SidePanelContent>
+    </SidePanel>
   );
 }
