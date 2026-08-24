@@ -21,7 +21,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { BrandCombobox } from "@/components/ui/brand-combobox";
 import {
   Phone,
   Mail,
@@ -592,11 +593,10 @@ export function ContactDetailView({
                     <SectionLabel>Vehicle</SectionLabel>
                     <div className="grid grid-cols-2 gap-3">
                       <Field label="Make">
-                        <Input
+                        <BrandCombobox
                           value={editCarBrand}
-                          onChange={(e) => setEditCarBrand(e.target.value)}
+                          onChange={setEditCarBrand}
                           placeholder="Toyota"
-                          className={INPUT_CLASS}
                         />
                       </Field>
                       <Field label="Model">

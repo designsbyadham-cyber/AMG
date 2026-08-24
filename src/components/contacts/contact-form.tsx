@@ -14,7 +14,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input } from "@/components/ui/input";
+import { BrandCombobox } from "@/components/ui/brand-combobox";
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 
@@ -294,10 +295,10 @@ export function ContactForm({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="cf-car-brand">Car Brand</Label>
-                <Input
+                <BrandCombobox
                   id="cf-car-brand"
                   value={carBrand}
-                  onChange={(e) => setCarBrand(e.target.value)}
+                  onChange={setCarBrand}
                   placeholder="e.g. Toyota, BMW"
                 />
               </div>

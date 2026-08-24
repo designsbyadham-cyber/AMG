@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import type { Deal, PipelineStage } from "@/types";
 import { SERVICE_CHIP_CLASS, getServiceTypes } from "@/lib/services";
+import { brandForContact } from "@/lib/car-brands";
+import { BrandBadge } from "@/components/ui/brand-badge";
 import {
   dueDate as getDueDate,
   formatCurrency,
@@ -64,6 +66,7 @@ export function DealRow({
   isDragging,
 }: DealRowProps) {
   const c = deal.contact;
+  const brand = brandForContact(c);
   const headline = vehicleName(deal);
   const showTitleAsSecondary = headline !== deal.title;
 
@@ -99,6 +102,14 @@ export function DealRow({
       )}
 
       <div className="flex flex-col gap-4 py-3 pl-4 pr-3 md:flex-row md:items-center">
+        {/* Make badge — the log is scanned down its left edge, so the
+            mark anchors there on md+. On mobile the row stacks and a
+            rail would strand it, so it floats over the hero photo the
+            way the grip already floats top-right. */}
+        <div className="absolute left-2 top-2 z-10 md:static md:z-auto md:shrink-0">
+          <BrandBadge brand={brand} size={36} />
+        </div>
+
         {/* ── Photo — full-width hero on mobile, small portrait on md+ ── */}
         <div className="order-1 w-full shrink-0 md:order-none md:w-24">
           <div className="aspect-[16/10] overflow-hidden rounded-lg border border-border/60 bg-muted sm:aspect-[2/1] md:aspect-[3/4]">

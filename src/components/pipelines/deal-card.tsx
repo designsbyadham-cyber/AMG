@@ -2,6 +2,8 @@
 
 import type { Deal, PipelineStage } from "@/types";
 import { SERVICE_CHIP_CLASS, getServiceTypes } from "@/lib/services";
+import { brandForContact } from "@/lib/car-brands";
+import { BrandBadge } from "@/components/ui/brand-badge";
 import {
   dueDate as getDueDate,
   formatCurrency,
@@ -51,6 +53,7 @@ export function DealCard({
   isOverlay,
 }: DealCardProps) {
   const c = deal.contact;
+  const brand = brandForContact(c);
 
   const headline = vehicleName(deal);
   const secondaryLabel = headline !== deal.title ? deal.title : null;
@@ -85,6 +88,11 @@ export function DealCard({
       }`}
     >
       <div className="flex flex-col gap-3 p-3">
+        {/* Make badge — left-aligned above the centred photo, so the
+            column can be scanned by manufacturer without opening a
+            card. */}
+        <BrandBadge brand={brand} size={32} />
+
         {/* Vehicle photo — portrait 3:4, centred, capped so it reads as a
             feature image without dominating the narrow column. */}
         <div className="relative mx-auto w-full max-w-[160px]">

@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/use-auth";
 import type { Contact, Deal, DealStatus, PipelineStage, Profile } from "@/types";
 import { SERVICE_TYPES } from "@/lib/services";
 import { JobPhotoUpload } from "@/components/pipelines/job-photo-upload";
+import { BrandCombobox } from "@/components/ui/brand-combobox";
+import { brandForContact } from "@/lib/car-brands";
 import {
   SidePanel,
   SidePanelContent,
@@ -63,6 +65,7 @@ export function DealForm({
   const [custName, setCustName] = useState("");
   const [custPhone, setCustPhone] = useState("");
   const [custEmail, setCustEmail] = useState("");
+  const [make, setMake] = useState("");
   const [vehicle, setVehicle] = useState("");
   const [year, setYear] = useState("");
   const [odometer, setOdometer] = useState("");
@@ -104,7 +107,12 @@ export function DealForm({
     setCustName(c.name ?? "");
     setCustPhone(c.phone ?? "");
     setCustEmail(c.email ?? "");
-    setVehicle([c.car_brand, c.car_model].filter(Boolean).join(" "));
+    // Recover the make when the contact predates the split field, so a
+    // save through this form cleans the record instead of preserving the
+    // gap. The model text is left untouched — auto-stripping the brand
+    // out of it would risk mangling entries like "Nissan Skyline GTR 33".
+    setMake(c.car_brand ?? brandForContact(c)?.name ?? "");
+    setVehicle(c.car_model ?? "");
     setYear(c.car_year != null ? String(c.car_year) : "");
     setPlate(c.plate_number ?? "");
     setServiceTypes(
@@ -140,6 +148,7 @@ export function DealForm({
       setCustName("");
       setCustPhone("");
       setCustEmail("");
+      setMake("");
       setVehicle("");
       setYear("");
       setOdometer("");
@@ -191,7 +200,8 @@ export function DealForm({
     : "";
 
   function deriveTitle(): string {
-    const base = vehicle.trim() || custName.trim() || "Job";
+    const base =
+      [make.trim(), vehicle.trim()].filter(Boolean).join(" ") || custName.trim() || "Job";
     return serviceTypes[0] ? `${base} — ${serviceTypes[0]}` : base;
   }
 
@@ -237,7 +247,7 @@ export function DealForm({
       name: custName.trim() || null,
       phone,
       email: custEmail.trim() || null,
-      car_brand: null as string | null,
+      car_brand: make.trim() || null,
       car_model: vehicle.trim() || null,
       car_year: year ? parseInt(year, 10) : null,
       plate_number: plate.trim() || null,
@@ -430,9 +440,13 @@ export function DealForm({
                   Vehicle
                 </p>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div className="col-span-2 grid gap-1.5">
-                    <Label className="text-xs text-muted-foreground">Make / Model</Label>
-                    <Input value={vehicle} onChange={(e) => setVehicle(e.target.value)} placeholder="Nissan Sentra" />
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs text-muted-foreground">Make</Label>
+                    <BrandCombobox value={make} onChange={setMake} placeholder="Nissan" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs text-muted-foreground">Model</Label>
+                    <Input value={vehicle} onChange={(e) => setVehicle(e.target.value)} placeholder="Sentra" />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs text-muted-foreground">Year</Label>
