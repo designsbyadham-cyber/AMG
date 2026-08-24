@@ -318,7 +318,7 @@ export function TagManager() {
             <Button
               onClick={handleDelete}
               disabled={deleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              variant="destructive"
             >
               {deleting ? (
                 <>

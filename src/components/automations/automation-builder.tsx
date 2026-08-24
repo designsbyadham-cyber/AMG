@@ -85,7 +85,7 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   update_contact_field: { label: "Update Contact Field", icon: PencilLine, border: "border-l-primary" },
   create_deal: { label: "Create Deal", icon: Briefcase, border: "border-l-primary" },
   wait: { label: "Wait", icon: Hourglass, border: "border-l-slate-500" },
-  condition: { label: "Condition (If/Else)", icon: GitBranch, border: "border-l-amber-500" },
+  condition: { label: "Condition (If/Else)", icon: GitBranch, border: "border-l-warning" },
   send_webhook: { label: "Send Webhook", icon: Webhook, border: "border-l-primary" },
   close_conversation: { label: "Close Conversation", icon: CircleSlash, border: "border-l-primary" },
 }
@@ -334,11 +334,11 @@ function TriggerCard({
           onClick={() => setOpen((v) => !v)}
           className="flex w-full items-center gap-3 px-4 py-3 text-left"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-500/10 text-blue-400">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
             <Zap className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[11px] uppercase tracking-wide text-blue-300">Trigger</div>
+            <div className="text-[11px] uppercase tracking-wide text-blue-600 dark:text-blue-400">Trigger</div>
             <div className="truncate text-sm font-medium text-foreground">
               {TRIGGER_OPTIONS.find((o) => o.value === type)?.label ?? type}
             </div>
@@ -640,7 +640,7 @@ function ConditionBranches({
       <BranchColumn label="Yes" color="text-primary">
         <StepList {...props} steps={yes} parentPath={yesPath} />
       </BranchColumn>
-      <BranchColumn label="No" color="text-rose-400">
+      <BranchColumn label="No" color="text-danger">
         <StepList {...props} steps={no} parentPath={noPath} />
       </BranchColumn>
     </div>

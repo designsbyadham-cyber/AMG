@@ -115,7 +115,7 @@ function groupMessagesByDate(messages: Message[]) {
 
 const STATUS_OPTIONS: { label: string; value: ConversationStatus; color: string }[] = [
   { label: "Open", value: "open", color: "text-primary" },
-  { label: "Pending", value: "pending", color: "text-amber-400" },
+  { label: "Pending", value: "pending", color: "text-warning" },
   { label: "Closed", value: "closed", color: "text-muted-foreground" },
 ];
 
@@ -722,7 +722,7 @@ export function MessageThread({
 
   return (
     <div className={cn("flex flex-1 flex-col", DOODLE_BG_CLASSES)}>
-      {/* Header — solid bg-slate-900 sits on top of the doodle so the
+      {/* Header — a solid card surface over the doodle so the
           name/avatar/dropdowns stay legible. */}
       <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 sm:px-4">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -751,7 +751,7 @@ export function MessageThread({
             variant="outline"
             className={cn(
               "ml-1 hidden gap-1 border-border text-[10px] sm:inline-flex sm:ml-2",
-              sessionInfo.expired ? "text-red-400" : "text-primary"
+              sessionInfo.expired ? "text-danger" : "text-primary"
             )}
           >
             <Clock className="h-3 w-3" />

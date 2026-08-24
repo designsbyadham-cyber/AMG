@@ -330,7 +330,7 @@ export function Step3Personalize({
       </div>
 
       {unmappedKeys.length > 0 && (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+        <div className="rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
           Map every placeholder before continuing — still missing{' '}
           <span className="font-mono font-semibold">
             {unmappedKeys.join(', ')}

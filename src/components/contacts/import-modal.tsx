@@ -279,7 +279,7 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
                   </div>
                 )}
                 {result.failed > 0 && (
-                  <div className="flex items-center gap-1.5 text-red-400 text-sm">
+                  <div className="flex items-center gap-1.5 text-danger text-sm">
                     <XCircle className="size-4" />
                     {result.failed} failed
                   </div>

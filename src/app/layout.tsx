@@ -1,10 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
-import { Toaster } from "sonner";
 import "./globals.css";
 import { ThemeProvider } from "@/hooks/use-theme";
-import { DEFAULT_THEME, STORAGE_KEY, THEME_IDS } from "@/lib/themes";
+import { ThemedToaster } from "@/components/ui/themed-toaster";
+import {
+  DEFAULT_THEME,
+  RETIRED_THEME_IDS,
+  STORAGE_KEY,
+  THEME_IDS,
+} from "@/lib/themes";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -31,28 +36,36 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  // First paint only; ThemeProvider rewrites this to the active
+  // theme surface once mounted.
+  themeColor: "#fafafa",
   colorScheme: "light dark",
 };
 
-// Inline boot script — runs before React hydrates so the user's
-// chosen theme is on the <html> element before first paint. Without
-// this every page load flashes the default Violet for a frame before
-// the React tree mounts and applies the picked theme.
+// Inline boot script — runs before React hydrates so the chosen theme
+// is on the <html> element before first paint. Without it every load
+// flashes Daylight for a frame before the React tree mounts and
+// applies a saved After Dark preference.
 //
-// Kept dependency-free (no imports, no JSX) — must be a string the
-// browser can run as a single <script>. Knowledge of valid theme IDs
-// is sourced from the THEME_IDS constant so adding a theme doesn't
-// silently break the boot path.
+// Kept dependency-free (no imports, no JSX) — it must be a string the
+// browser can run as a single <script>. Valid and retired theme ids
+// are injected from src/lib/themes.ts so the boot path cannot drift
+// from the catalog.
 const THEME_BOOT_SCRIPT = `
 (function(){
   try {
     var STORAGE_KEY = ${JSON.stringify(STORAGE_KEY)};
     var DEFAULT = ${JSON.stringify(DEFAULT_THEME)};
     var ALLOWED = ${JSON.stringify(THEME_IDS)};
+    var RETIRED = ${JSON.stringify(RETIRED_THEME_IDS)};
     var saved = localStorage.getItem(STORAGE_KEY);
-    var theme = ALLOWED.indexOf(saved) !== -1 ? saved : DEFAULT;
+    var theme = ALLOWED.indexOf(saved) !== -1
+      ? saved
+      : (Object.prototype.hasOwnProperty.call(RETIRED, saved) ? RETIRED[saved] : DEFAULT);
     document.documentElement.dataset.theme = theme;
+    // Rewrite the stored value too, so a retired id is migrated once
+    // rather than re-resolved on every single page load.
+    if (theme !== saved) localStorage.setItem(STORAGE_KEY, theme);
   } catch (_e) {
     document.documentElement.dataset.theme = ${JSON.stringify(DEFAULT_THEME)};
   }
@@ -87,10 +100,7 @@ export default function RootLayout({
       <body className="min-h-full bg-background text-foreground font-sans">
         <ThemeProvider>
           {children}
-          <Toaster
-            theme="light"
-            position="top-right"
-          />
+          <ThemedToaster />
         </ThemeProvider>
       </body>
     </html>

@@ -139,7 +139,7 @@ export default function BroadcastsPage() {
   if (error) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-2">
-        <p className="text-sm text-red-400">{error}</p>
+        <p className="text-sm text-danger">{error}</p>
         <Button variant="outline" onClick={() => window.location.reload()}>
           Retry
         </Button>
@@ -266,8 +266,8 @@ export default function BroadcastsPage() {
                       >
                         {status.pulse && (
                           <span className="relative flex h-1.5 w-1.5">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-yellow-400 opacity-75" />
-                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning opacity-75" />
+                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-warning" />
                           </span>
                         )}
                         {status.label}
