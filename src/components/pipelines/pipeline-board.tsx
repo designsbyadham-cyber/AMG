@@ -118,6 +118,7 @@ export function PipelineBoard({
             <StageColumn
               key={stage.id}
               stage={stage}
+              stages={sortedStages}
               deals={stageDeals}
               totalValue={totalValue}
               onAddDeal={onAddDeal}
@@ -140,6 +141,7 @@ export function PipelineBoard({
               stage={
                 sortedStages.find((s) => s.id === activeDeal.stage_id) ?? null
               }
+              stages={sortedStages}
               onEdit={() => {}}
               isOverlay
             />
@@ -167,12 +169,14 @@ export function PipelineBoard({
 
 function StageColumn({
   stage,
+  stages,
   deals,
   totalValue,
   onAddDeal,
   onEditDeal,
 }: {
   stage: PipelineStage;
+  stages: PipelineStage[];
   deals: Deal[];
   totalValue: number;
   onAddDeal: (stageId: string) => void;
@@ -221,6 +225,7 @@ function StageColumn({
               key={deal.id}
               deal={deal}
               stage={stage}
+              stages={stages}
               onEdit={onEditDeal}
             />
           ))
@@ -243,10 +248,12 @@ function StageColumn({
 function DraggableDealCard({
   deal,
   stage,
+  stages,
   onEdit,
 }: {
   deal: Deal;
   stage: PipelineStage;
+  stages: PipelineStage[];
   onEdit: (deal: Deal) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -263,6 +270,7 @@ function DraggableDealCard({
       <DealCard
         deal={deal}
         stage={stage}
+        stages={stages}
         onEdit={onEdit}
       />
     </div>

@@ -59,7 +59,7 @@ export function ServiceChip({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium',
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium',
         meta.chip,
         className,
       )}
