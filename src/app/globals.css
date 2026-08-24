@@ -127,10 +127,12 @@ html[data-theme="sunlight"] {
   --chart-4: oklch(0.82 0.04 250);
   --chart-5: oklch(0.89 0.02 250);
   --radius: 0.625rem;
-  /* The sidebar sits in the same light world as the page. A dark rail
-   * against a white canvas reads as two designs bolted together. */
-  --sidebar: oklch(0.965 0.004 250);
-  --sidebar-foreground: oklch(0.3 0.012 255);
+  /* The nav is a white panel floating inside a deep rail, so `--sidebar`
+   * is the rail behind the panel, not the panel itself (the panel takes
+   * `--card`). Violet-leaning off the brand indigo: deep enough that the
+   * white panel reads as lifted, close enough in hue that it belongs. */
+  --sidebar: oklch(0.25 0.09 280);
+  --sidebar-foreground: oklch(0.97 0.005 280);
   --sidebar-primary: oklch(0.52 0.14 262);
   --sidebar-primary-foreground: oklch(0.99 0 0);
   --sidebar-accent: oklch(0.93 0.006 250);
@@ -189,7 +191,9 @@ html[data-theme="dark"] {
   --chart-5: oklch(0.38 0.03 255);
   /* The rail sits one step darker than the page, the mirror of how
    * it sits one step lighter in Daylight. */
-  --sidebar: oklch(0.17 0.013 262);
+  /* Same rail-behind-panel structure as Daylight. It has to sit *below*
+   * --card (0.19) in lightness, or the panel stops reading as lifted. */
+  --sidebar: oklch(0.13 0.03 280);
   --sidebar-foreground: oklch(0.9 0.006 262);
   --sidebar-primary: oklch(0.68 0.15 262);
   --sidebar-primary-foreground: oklch(0.16 0.02 262);
