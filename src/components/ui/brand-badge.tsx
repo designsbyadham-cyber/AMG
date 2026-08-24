@@ -57,12 +57,20 @@ export function BrandBadge({
   if (height) {
     return (
       <span
-        className={shell}
-        // Cap the width so a long wordmark cannot push the layout around,
-        // and floor it so a circular mark still reads as a chip. The cap
-        // is generous because the artwork is cropped to its ink now — a
-        // tight cap would just shrink the wide marks straight back down.
-        style={{ height, minWidth: height, maxWidth: height * 4, padding: 2 }}
+        className={cn(shell, 'justify-start')}
+        // A DEFINITE box on both axes, deliberately.
+        //
+        // The previous version let the width come from the image
+        // (`w-auto` inside a content-sized span) which is circular: the
+        // span sized to the image while the image capped to the span.
+        // Browsers resolve that inconsistently, and with lazy loading the
+        // answer depended on whether the file had arrived yet — so the
+        // same logo rendered at different sizes on different cards.
+        //
+        // Fixed box, `object-contain`, left-aligned: wide wordmarks fill
+        // the width, round marks fill the height, and every card gets an
+        // identical result every time.
+        style={{ width: height * 2.6, height, padding: 2 }}
         title={brand?.name ?? 'Unknown make'}
       >
         {showLogo ? (
@@ -72,7 +80,7 @@ export function BrandBadge({
             alt={brand.name}
             loading="lazy"
             onError={() => setFailed(true)}
-            className="h-full w-auto max-w-full object-contain"
+            className="h-full w-full object-contain object-left"
           />
         ) : brand ? (
           <span
