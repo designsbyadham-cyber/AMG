@@ -167,19 +167,19 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         )}
       />
 
-      {/* The rail. The nav proper is the panel nested inside it, so the
-          navigation reads as its own object rather than as a strip of
-          the page that happens to hold links. */}
+      {/* Part of the page, not an object on it: full-bleed, square, no
+          frame and no divider. It separates from the content area by
+          surface tone alone. */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex h-full w-[17rem] flex-col bg-sidebar p-2.5",
+          "fixed inset-y-0 left-0 z-40 flex h-full w-[16.5rem] flex-col bg-sidebar",
           "transition-transform duration-200 ease-out will-change-transform",
           open ? "translate-x-0" : "-translate-x-full",
-          "lg:static lg:z-0 lg:w-[16.5rem] lg:translate-x-0 lg:transition-none",
+          "lg:static lg:z-0 lg:w-64 lg:translate-x-0 lg:transition-none",
         )}
         aria-label="Primary"
       >
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card shadow-sm">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {/* ── Brand ─────────────────────────────────────────────── */}
           <div className="flex shrink-0 items-start gap-2.5 px-4 pt-4 pb-3">
             <Link href="/dashboard" className="flex min-w-0 flex-1 items-center gap-2.5">
