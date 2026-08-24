@@ -72,7 +72,7 @@ export function JobCardBody({ deal, stage, stages, compact }: JobCardBodyProps) 
       {/* ── 2. Identity left, photo right ────────────────────────── */}
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
-          <BrandBadge brand={brand} height={compact ? 28 : 34} />
+          <BrandBadge brand={brand} height={compact ? 48 : 64} />
 
           <h3
             className={cn(

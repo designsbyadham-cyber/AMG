@@ -59,8 +59,10 @@ export function BrandBadge({
       <span
         className={shell}
         // Cap the width so a long wordmark cannot push the layout around,
-        // and floor it so a circular mark still reads as a chip.
-        style={{ height, minWidth: height, maxWidth: height * 3.4, padding: 2 }}
+        // and floor it so a circular mark still reads as a chip. The cap
+        // is generous because the artwork is cropped to its ink now — a
+        // tight cap would just shrink the wide marks straight back down.
+        style={{ height, minWidth: height, maxWidth: height * 4, padding: 2 }}
         title={brand?.name ?? 'Unknown make'}
       >
         {showLogo ? (
