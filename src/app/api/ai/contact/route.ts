@@ -24,6 +24,7 @@ import { buildContactContext } from '@/lib/ai/redact';
 import { chat, isAiConfigured, AI_FAILURE_MESSAGE } from '@/lib/ai/provider';
 import { SERVICE_TYPES } from '@/lib/services';
 import { LEAD_STATUSES } from '@/lib/lead-status';
+import { extractJson } from '@/lib/ai/extract-json';
 import type { Contact, Deal } from '@/types';
 
 const SUMMARY_SYSTEM = `You write one short paragraph briefing a car-workshop employee before they phone a customer.
@@ -160,8 +161,9 @@ export async function POST(request: Request) {
     system: task === 'summary' ? SUMMARY_SYSTEM : CLEANUP_SYSTEM,
     user: JSON.stringify(context),
     temperature: task === 'summary' ? 0.4 : 0,
-    maxTokens: task === 'summary' ? 200 : 400,
-    json: task === 'cleanup',
+    // Generous budgets: the default model reasons before answering, and
+    // a starved budget truncates mid-thought rather than failing loudly.
+    maxTokens: task === 'summary' ? 600 : 900,
   });
 
   if (!result.ok) {
@@ -187,10 +189,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ summary: result.text });
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(result.text);
-  } catch {
+  const parsed = extractJson(result.text);
+  if (parsed === null) {
     console.error('[ai] cleanup returned non-JSON');
     return NextResponse.json(
       { error: 'The model returned something unreadable. Try again.', reason: 'empty_response' },

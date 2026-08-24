@@ -12,6 +12,12 @@
  * "self-hosted on our own box later" — swapping providers is an env
  * change, not a rewrite. Feature code never imports a vendor SDK.
  *
+ * Model note: the default is GPT-OSS 120B — an open-weight (Apache
+ * 2.0) model, despite the vendor prefix in its id. Reasoning-style
+ * models spend tokens thinking before they answer, so token budgets
+ * here are generous; starving them truncates the answer and, in JSON
+ * mode, fails the request outright.
+ *
  * Two deliberate properties:
  *  - **It never throws.** Callers get a tagged result. An outage or a
  *    missing key degrades to a disabled button, not a 500.
@@ -66,7 +72,7 @@ function resolveConfig(): ProviderConfig {
   return {
     baseUrl: 'https://api.groq.com/openai/v1',
     apiKey: process.env.GROQ_API_KEY ?? null,
-    model: process.env.AI_MODEL ?? 'llama-3.3-70b-versatile',
+    model: process.env.AI_MODEL ?? 'openai/gpt-oss-120b',
     requiresKey: true,
   };
 }

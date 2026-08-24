@@ -1,0 +1,13 @@
+-- Fix: coexistence_backfill_summary ran with its creator's rights.
+--
+-- The view (from 022_coexistence_schema) aggregates historical message
+-- counts per account. Postgres views default to the *creator's*
+-- permissions, so RLS on messages/conversations/whatsapp_config never
+-- applied to anyone querying it: a signed-in member of one account could
+-- read backfill statistics for every other account on the instance.
+--
+-- `security_invoker = true` makes the view run as the querying user, so
+-- the same RLS that protects the underlying tables now protects the
+-- view. The diagnostic still works — it just shows you your own account
+-- instead of everyone's. Requires Postgres 15+; this project is on 17.
+ALTER VIEW public.coexistence_backfill_summary SET (security_invoker = true);
