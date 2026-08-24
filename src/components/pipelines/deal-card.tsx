@@ -1,9 +1,10 @@
 "use client";
 
 import type { Deal, PipelineStage } from "@/types";
-import { SERVICE_CHIP_CLASS, getServiceTypes } from "@/lib/services";
+import { getServiceTypes } from "@/lib/services";
 import { brandForContact } from "@/lib/car-brands";
 import { BrandBadge } from "@/components/ui/brand-badge";
+import { ServiceChip } from "@/components/ui/service-chip";
 import {
   dueDate as getDueDate,
   formatCurrency,
@@ -56,9 +57,6 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
         isOverlay ? "shadow-lg" : "hover:border-foreground/20"
       }`}
     >
-      {/* The make sits in the corner, matching the log row. */}
-      <BrandBadge brand={brand} size={32} className="absolute right-3 top-3 z-10" />
-
       <div className="flex flex-col gap-3">
         <div className="relative">
           <div className="aspect-[16/10] overflow-hidden rounded-lg bg-muted">
@@ -78,48 +76,46 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
           </div>
 
           {deal.status === "won" && (
-            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-success px-2 py-0.5 text-[10px] font-semibold text-white">
+            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-success px-2 py-0.5 text-[10px] font-semibold text-white">
               <Check className="size-3" />
               Won
             </span>
           )}
           {deal.status === "lost" && (
-            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-danger px-2 py-0.5 text-[10px] font-semibold text-white">
+            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-danger px-2 py-0.5 text-[10px] font-semibold text-white">
               <X className="size-3" />
               Lost
             </span>
           )}
         </div>
 
-        <div className="min-w-0 pr-9">
-          <h4 className="truncate text-sm font-semibold leading-snug text-foreground" title={headline}>
+        <div className="flex items-center gap-2.5">
+          <BrandBadge brand={brand} size={44} className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h4 className="truncate text-sm font-semibold leading-snug text-foreground" title={headline}>
             {headline}
             {c?.car_year ? (
               <span className="ml-1 font-normal text-muted-foreground">{c.car_year}</span>
             ) : null}
-          </h4>
-          <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <User className="size-3 shrink-0" />
-            <span className="truncate">{contactDisplay}</span>
-          </p>
+            </h4>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <User className="size-3 shrink-0" />
+              <span className="truncate">{contactDisplay}</span>
+            </p>
+          </div>
         </div>
 
         {services.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {services.map((s) => (
-              <span
-                key={s}
-                className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${SERVICE_CHIP_CLASS}`}
-              >
-                {s}
-              </span>
+              <ServiceChip key={s} service={s} />
             ))}
           </div>
         )}
 
         {/* The rule, then the numbers. */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-[10px] font-semibold text-foreground">
             <span
               aria-hidden
               className="size-1.5 rounded-full"

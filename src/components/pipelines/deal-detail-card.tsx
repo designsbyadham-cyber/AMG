@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Deal } from '@/types';
-import { SERVICE_CHIP_CLASS, getServiceTypes } from '@/lib/services';
+import { getServiceTypes } from '@/lib/services';
+import { ServiceChip } from '@/components/ui/service-chip';
 import {
   Dialog,
   DialogContent,
@@ -142,12 +143,7 @@ export function DealDetailCard({
                   <Wrench className="size-3 shrink-0 mt-0.5" />
                   <div className="flex flex-wrap gap-1">
                     {getServiceTypes(c).map((s) => (
-                      <span
-                        key={s}
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SERVICE_CHIP_CLASS}`}
-                      >
-                        {s}
-                      </span>
+                      <ServiceChip key={s} service={s} />
                     ))}
                   </div>
                 </div>

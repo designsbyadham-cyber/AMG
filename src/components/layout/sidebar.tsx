@@ -193,8 +193,9 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                   occupies x 2.39%–24.10% of the image, centred at
                   13.24%. Scaling to 358% makes it ~28px inside the 36px
                   chip, and translating by its own centre lands it dead
-                  centre. Re-measure if the asset is ever replaced. */}
-              <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-white ring-1 ring-inset ring-black/5">
+                  centre; the crop is proportional, so the chip can be
+                  resized freely. Re-measure if the asset is replaced. */}
+              <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/logo.png"
@@ -204,7 +205,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 />
               </span>
               <span className="min-w-0">
-                <span className="block truncate font-heading text-sm font-bold leading-tight text-foreground">
+                <span className="block truncate font-heading text-base font-bold leading-tight text-foreground">
                   AMG Operations
                 </span>
                 <span className="block truncate text-xs leading-tight text-muted-foreground">

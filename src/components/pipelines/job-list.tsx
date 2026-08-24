@@ -219,6 +219,7 @@ export function JobList({
               <StageSection
                 key={stage.id}
                 stage={stage}
+                stages={sortedStages}
                 deals={dealsByStage.get(stage.id) ?? []}
                 onOpenDeal={onOpenDeal}
                 onAddDeal={onAddDeal}
@@ -232,6 +233,7 @@ export function JobList({
                 <DealRow
                   deal={activeDeal}
                   stage={stageById.get(activeDeal.stage_id) ?? null}
+                  stages={sortedStages}
                   onOpen={() => {}}
                 />
               </div>
@@ -245,11 +247,13 @@ export function JobList({
 
 function StageSection({
   stage,
+  stages,
   deals,
   onOpenDeal,
   onAddDeal,
 }: {
   stage: PipelineStage;
+  stages: PipelineStage[];
   deals: Deal[];
   onOpenDeal: (deal: Deal) => void;
   onAddDeal: (stageId?: string) => void;
@@ -261,9 +265,11 @@ function StageSection({
     <section>
       {/* Stage header — the status label for everything beneath it */}
       <div className="mb-3 flex items-center gap-2">
+        {/* Colour bar, not a dot — the reference marks each group with a
+            short vertical rule in the stage colour. */}
         <span
           aria-hidden
-          className="size-2.5 shrink-0 rounded-full"
+          className="h-4 w-1 shrink-0 rounded-full"
           style={{ backgroundColor: stage.color }}
         />
         <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
@@ -306,6 +312,7 @@ function StageSection({
               key={deal.id}
               deal={deal}
               stage={stage}
+              stages={stages}
               onOpen={onOpenDeal}
             />
           ))
@@ -318,10 +325,12 @@ function StageSection({
 function DraggableDealRow({
   deal,
   stage,
+  stages,
   onOpen,
 }: {
   deal: Deal;
   stage: PipelineStage;
+  stages: PipelineStage[];
   onOpen: (deal: Deal) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -349,6 +358,7 @@ function DraggableDealRow({
     <DealRow
       deal={deal}
       stage={stage}
+      stages={stages}
       onOpen={onOpen}
       dragHandle={handle}
       isDragging={isDragging}
