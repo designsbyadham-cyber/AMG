@@ -70,7 +70,15 @@ export function BrandBadge({
         // Fixed box, `object-contain`, left-aligned: wide wordmarks fill
         // the width, round marks fill the height, and every card gets an
         // identical result every time.
-        style={{ width: height * 2.6, height, padding: 2 }}
+        //
+        // `height` is therefore the size a *square* mark renders at, and
+        // it is the number to change if the logos look wrong overall.
+        // The box is 4x as wide as it is tall so that anything up to 4:1
+        // — which is most of the set, including Audi's rings and the
+        // Mercedes lockup — reaches full height and only the genuinely
+        // long wordmarks (Kawasaki, Hummer, AMG at ~9:1) sit shorter.
+        // A narrower box would squeeze those to a sliver instead.
+        style={{ width: height * 4, height, padding: 2 }}
         title={brand?.name ?? 'Unknown make'}
       >
         {showLogo ? (
