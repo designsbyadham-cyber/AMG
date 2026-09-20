@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BrandCombobox } from "@/components/ui/brand-combobox";
+import { formatCurrency } from "@/lib/jobs";
 import {
   Phone,
   Mail,
@@ -840,11 +841,7 @@ export function ContactDetailView({
                         </div>
                         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                           <span className="tabular-nums">
-                            {new Intl.NumberFormat('en-US', {
-                              style: 'currency',
-                              currency: deal.currency || 'USD',
-                              maximumFractionDigits: 0,
-                            }).format(Number(deal.value || 0))}
+                            {formatCurrency(Number(deal.value || 0))}
                           </span>
                           {deal.status && deal.status !== 'open' && (
                             <span

@@ -17,15 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Phone, Car, Gauge, Wrench, Calendar, CheckCircle2, Circle } from 'lucide-react';
 import { toast } from 'sonner';
-
-function formatCurrency(value: number, currency?: string) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency || 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0));
-}
+import { formatCurrency } from '@/lib/jobs';
 
 interface DealDetailCardProps {
   open: boolean;
@@ -178,7 +170,7 @@ export function DealDetailCard({
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Quote Value</span>
             <span className="text-lg font-bold text-foreground">
-              {formatCurrency(deal.value, deal.currency)}
+              {formatCurrency(deal.value)}
             </span>
           </div>
 
@@ -209,7 +201,7 @@ export function DealDetailCard({
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Amount</Label>
                 <div className="h-8 rounded-lg border border-border/50 bg-background px-3 flex items-center text-sm font-medium text-foreground">
-                  {formatCurrency(depositAmount, deal.currency)}
+                  {formatCurrency(depositAmount)}
                 </div>
               </div>
             </div>
@@ -236,7 +228,7 @@ export function DealDetailCard({
             <div className="flex items-center justify-between pt-1 border-t border-border/50">
               <span className="text-xs text-muted-foreground">Remaining Balance</span>
               <span className="text-sm font-semibold text-foreground">
-                {formatCurrency(remainingBalance, deal.currency)}
+                {formatCurrency(remainingBalance)}
               </span>
             </div>
           </div>

@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/jobs";
 
 interface ContactSidebarProps {
   contact: Contact | null;
@@ -226,8 +227,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                     </p>
                     <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
                       <span>
-                        {deal.currency ?? "$"}
-                        {deal.value.toLocaleString()}
+                        {formatCurrency(deal.value)}
                       </span>
                       {deal.stage && (
                         <span

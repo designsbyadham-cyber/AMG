@@ -149,7 +149,7 @@ export function JobCardBody({ deal, stage, stages, compact }: JobCardBodyProps) 
             compact ? "text-base" : "text-xl",
           )}
         >
-          {formatCurrency(deal.value, deal.currency)}
+          {formatCurrency(deal.value)}
         </span>
 
         {due && (

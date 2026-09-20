@@ -9,10 +9,20 @@
 
 import type { Deal, PipelineStage } from '@/types';
 
-export function formatCurrency(value: number, currency?: string) {
-  return new Intl.NumberFormat('en-US', {
+/**
+ * The one money formatter. AED, deliberately hard-coded.
+ *
+ * There used to be five private copies of this, four of them emitting
+ * USD, so the same job read "$27,000" on the board and "AED 27,000" on
+ * the dashboard. The shop bills in dirhams; nothing in the UI should
+ * say dollars. `deal.currency` is intentionally NOT consulted — the
+ * intake form still lets a currency be picked, but no display surface
+ * honours it, so that selector is the thing to remove next, not this.
+ */
+export function formatCurrency(value: number) {
+  return new Intl.NumberFormat('en-AE', {
     style: 'currency',
-    currency: currency || 'USD',
+    currency: 'AED',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(Number(value || 0));
