@@ -28,6 +28,31 @@ export function formatCurrency(value: number) {
   }).format(Number(value || 0));
 }
 
+/**
+ * The same figure as `formatCurrency`, split so a large display number
+ * can set the currency code smaller than the amount. `compact` gives
+ * "446.7K" for the places a full figure will not fit.
+ */
+export function currencyParts(
+  value: number,
+  { compact = false }: { compact?: boolean } = {}
+): { code: string; amount: string } {
+  const parts = new Intl.NumberFormat('en-AE', {
+    style: 'currency',
+    currency: 'AED',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: compact ? 1 : 0,
+    notation: compact ? 'compact' : 'standard',
+  }).formatToParts(Number(value || 0));
+  return {
+    code: parts.find((p) => p.type === 'currency')?.value ?? 'AED',
+    amount: parts
+      .filter((p) => p.type !== 'currency' && p.type !== 'literal')
+      .map((p) => p.value)
+      .join(''),
+  };
+}
+
 /** dd/mm/yyyy — matches the job log's date style. */
 export function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-GB', {
