@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { SearchParamReader } from "@/components/layout/search-param-reader";
 import type { Pipeline, PipelineStage, Deal } from "@/types";
 import { PipelineBoard } from "@/components/pipelines/pipeline-board";
 import { JobList } from "@/components/pipelines/job-list";
@@ -86,6 +87,10 @@ export default function PipelinesPage() {
 
   // Guard against double-seeding (React StrictMode double-effect in dev).
   const seedAttempted = useRef(false);
+
+  // `?job=<id>` deep link, used by the dashboard search.
+  const [jobParam, setJobParam] = useState<string | null>(null);
+  const openedJobRef = useRef<string | null>(null);
 
   const loadPipelines = useCallback(async () => {
     const { data, error } = await supabase
@@ -213,6 +218,39 @@ export default function PipelinesPage() {
       cancelled = true;
     };
   }, [selectedPipelineId, loadStages, loadDeals]);
+
+  // Open the deep-linked job: switch to its own pipeline and show its
+  // card. Fetched by id rather than found in `deals`, so it works
+  // whichever pipeline happened to load first. Opens once per link —
+  // the ref is set only once the card is actually shown, so StrictMode's
+  // double effect can't swallow it, and closing the card keeps it closed
+  // through later pipeline refreshes.
+  useEffect(() => {
+    if (!jobParam || pipelines.length === 0 || openedJobRef.current === jobParam) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("deals")
+        .select("*, contact:contacts(*), assignee:profiles!deals_assigned_to_fkey(*)")
+        .eq("id", jobParam)
+        .maybeSingle();
+      if (cancelled) return;
+      openedJobRef.current = jobParam;
+      if (!data) {
+        toast.error("That job couldn't be found. It may have been deleted.");
+        return;
+      }
+      const deal = data as Deal;
+      if (pipelines.some((p) => p.id === deal.pipeline_id)) {
+        setSelectedPipelineId(deal.pipeline_id);
+      }
+      setViewingDeal(deal);
+      setDetailOpen(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobParam, pipelines, supabase]);
 
   const refreshPipelines = useCallback(async () => {
     const list = await loadPipelines();
@@ -391,6 +429,10 @@ export default function PipelinesPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
+      <Suspense fallback={null}>
+        <SearchParamReader name="job" onChange={setJobParam} />
+      </Suspense>
+
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">

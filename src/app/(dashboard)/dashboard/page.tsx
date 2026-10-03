@@ -1,17 +1,11 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   AlertTriangle,
   ArrowDown,
@@ -24,7 +18,6 @@ import {
   Gauge,
   Minus,
   RefreshCw,
-  Search,
   TrendingUp,
   Wallet,
   X,
@@ -35,7 +28,10 @@ import type { Deal, PipelineStage } from '@/types';
 import { brandForContact } from '@/lib/car-brands';
 import { BrandBadge } from '@/components/ui/brand-badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { CommandSearch } from '@/components/dashboard/command-search';
+import { useCountUp } from '@/hooks/use-count-up';
+import { EASE_OUT, SPRING, listItem, rise, stagger } from '@/lib/motion';
+import { searchJobs } from '@/lib/search';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -124,9 +120,12 @@ export default function DashboardPage() {
 
   const [period, setPeriod] = useState<PeriodId>(DEFAULT_PERIOD);
   const [segment, setSegment] = useState<Segment>('top');
-  const [query, setQuery] = useState('');
+  // Set only by the search's "Show all matching jobs"; the field itself
+  // shows its results in its own dropdown.
+  const [tableQuery, setTableQuery] = useState('');
   const [expanded, setExpanded] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
 
   const load = useCallback(async () => {
     try {
@@ -159,19 +158,6 @@ export default function DashboardPage() {
     load();
   };
 
-  // ⌘K / Ctrl+K jumps to search, as the hint in the field promises.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        searchRef.current?.focus();
-        searchRef.current?.select();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
   const view = useMemo(() => {
     if (!deals || !stages) return null;
     const now = new Date();
@@ -203,21 +189,18 @@ export default function DashboardPage() {
   }, [deals, stages, period]);
 
   const loading = view === null && !failed;
-  const term = query.trim().toLowerCase();
+  const term = tableQuery.trim();
 
   const rows: TableRow[] = useMemo(() => {
     if (!view || !deals) return [];
     if (term) {
-      // Search reaches every job, not just the ones on screen: it is the
-      // page's "find that car" box, and a job outside the date range is
-      // still a job someone is looking for.
-      return deals
-        .filter((d) => haystack(d, view.stageName).includes(term))
-        .sort(
-          (a, b) =>
-            (bookedAt(b)?.getTime() ?? 0) - (bookedAt(a)?.getTime() ?? 0)
-        )
-        .map((deal) => ({ deal, amount: Number(deal.value || 0) }));
+      // Same matching and order as the search dropdown, so "Show all 12"
+      // lists exactly the twelve it counted. Reaches every job, not just
+      // the ones in the date range.
+      return searchJobs(deals, term, view.stageName).map((deal) => ({
+        deal,
+        amount: Number(deal.value || 0),
+      }));
     }
     switch (segment) {
       case 'late':
@@ -247,8 +230,17 @@ export default function DashboardPage() {
 
   const selectSegment = (next: Segment) => {
     setSegment((prev) => (prev === next ? 'top' : next));
-    setQuery('');
+    setTableQuery('');
     setExpanded(false);
+  };
+
+  const showAllJobs = (q: string) => {
+    setTableQuery(q);
+    setExpanded(false);
+    tableRef.current?.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start',
+    });
   };
 
   const exportCsv = () => {
@@ -288,16 +280,27 @@ export default function DashboardPage() {
 
   return (
     <TooltipProvider>
-      <div className="mx-auto w-full max-w-6xl space-y-5">
+      {/* Sections arrive one after another, top to bottom, the order the
+          page is read in. Played once on mount; data arriving later
+          rolls the numbers instead of replaying the entrance. */}
+      <motion.div
+        variants={stagger(0.07)}
+        initial="hidden"
+        animate="show"
+        className="mx-auto w-full max-w-6xl space-y-5"
+      >
         {/* ── Toolbar ───────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <SearchField
-            inputRef={searchRef}
-            value={query}
-            onChange={(v) => {
-              setQuery(v);
-              setExpanded(false);
-            }}
+        {/* z-20: the sections below become their own stacking layers
+            while they animate, and would otherwise paint over the
+            search dropdown. */}
+        <motion.div
+          variants={rise}
+          className="relative z-20 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <CommandSearch
+            deals={deals}
+            stageName={view?.stageName}
+            onShowAllJobs={showAllJobs}
           />
           <div className="flex flex-wrap items-center gap-2">
             <div className="border-border bg-card text-foreground hidden h-8 items-center gap-2 rounded-lg border px-3 text-sm sm:inline-flex">
@@ -336,23 +339,35 @@ export default function DashboardPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button onClick={exportCsv} disabled={!view}>
-              <Download />
+            <Button
+              onClick={exportCsv}
+              disabled={!view}
+              className="group/export"
+            >
+              <Download className="transition-transform duration-200 group-hover/export:translate-y-px" />
               Export
             </Button>
           </div>
-        </div>
+        </motion.div>
 
-        <h1 className="text-foreground text-2xl font-semibold tracking-tight">
+        <motion.h1
+          variants={rise}
+          className="text-foreground text-2xl font-semibold tracking-tight"
+        >
           Dashboard
-        </h1>
+        </motion.h1>
 
         {failed ? (
-          <LoadError onRetry={retry} />
+          <motion.div variants={rise}>
+            <LoadError onRetry={retry} />
+          </motion.div>
         ) : (
           <>
             {/* ── KPIs ─────────────────────────────────────────────── */}
-            <div className="grid gap-4 sm:grid-cols-3">
+            <motion.div
+              variants={stagger(0.07)}
+              className="grid gap-4 sm:grid-cols-3"
+            >
               <KpiCard
                 label="Total Pipeline Value"
                 icon={<Wallet />}
@@ -379,7 +394,7 @@ export default function DashboardPage() {
                 value={view?.stats.avgValue ?? 0}
                 previous={compared ? (view?.prevStats?.avgValue ?? 0) : null}
               />
-            </div>
+            </motion.div>
 
             {/* ── Customers ────────────────────────────────────────── */}
             <Card
@@ -473,90 +488,29 @@ export default function DashboardPage() {
             </Card>
 
             {/* ── Jobs table ───────────────────────────────────────── */}
-            <JobsTable
-              rows={rows}
-              loading={loading}
-              segment={segment}
-              term={term}
-              rawQuery={query.trim()}
-              expanded={expanded}
-              onExpand={() => setExpanded(true)}
-              onClear={() => {
-                setQuery('');
-                setSegment('top');
-                setExpanded(false);
-              }}
-              stageName={view?.stageName}
-              onOpen={() => router.push('/pipelines')}
-            />
+            <motion.div variants={rise} ref={tableRef} className="scroll-mt-4">
+              <JobsTable
+                rows={rows}
+                loading={loading}
+                segment={segment}
+                term={term}
+                expanded={expanded}
+                onExpand={() => setExpanded(true)}
+                onClear={() => {
+                  setTableQuery('');
+                  setSegment('top');
+                  setExpanded(false);
+                }}
+                stageName={view?.stageName}
+                onOpen={(deal) =>
+                  router.push(`/pipelines?job=${encodeURIComponent(deal.id)}`)
+                }
+              />
+            </motion.div>
           </>
         )}
-      </div>
+      </motion.div>
     </TooltipProvider>
-  );
-}
-
-/* ═══ Toolbar ═════════════════════════════════════════════════════════ */
-
-const noopSubscribe = () => () => {};
-
-/** Platform for the shortcut hint. Server render assumes not-Mac. */
-function useIsMac() {
-  return useSyncExternalStore(
-    noopSubscribe,
-    () => /Mac|iPhone|iPad|iPod/.test(navigator.userAgent),
-    () => false
-  );
-}
-
-function SearchField({
-  inputRef,
-  value,
-  onChange,
-}: {
-  inputRef: React.RefObject<HTMLInputElement | null>;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const isMac = useIsMac();
-  return (
-    <div className="relative w-full sm:max-w-xs">
-      <Search
-        aria-hidden
-        className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-      />
-      <Input
-        ref={inputRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            onChange('');
-            e.currentTarget.blur();
-          }
-        }}
-        placeholder="Search jobs, customers, plates…"
-        aria-label="Search jobs"
-        className="bg-card h-9 pr-16 pl-9"
-      />
-      {value ? (
-        <button
-          type="button"
-          onClick={() => {
-            onChange('');
-            inputRef.current?.focus();
-          }}
-          aria-label="Clear search"
-          className="text-muted-foreground hover:bg-muted hover:text-foreground absolute top-1/2 right-2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md transition-colors"
-        >
-          <X className="size-3.5" />
-        </button>
-      ) : (
-        <kbd className="border-border bg-muted text-muted-foreground pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-md border px-1.5 py-0.5 font-sans text-[10px] font-medium">
-          {isMac ? '⌘K' : 'Ctrl K'}
-        </kbd>
-      )}
-    </div>
   );
 }
 
@@ -575,7 +529,8 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section
+    <motion.section
+      variants={rise}
       aria-label={title}
       className="border-border bg-card rounded-2xl border p-4 shadow-xs sm:p-5"
     >
@@ -587,7 +542,7 @@ function Card({
         <CardMenu title={title} links={menu} className="ml-auto" />
       </header>
       {children}
-    </section>
+    </motion.section>
   );
 }
 
@@ -629,18 +584,25 @@ function CardMenu({
  * A money figure with the currency code set small, so the eye lands on
  * the amount. `hero` is the page's one headline number; it is compact
  * ("446.7K") with the exact figure in the title.
+ *
+ * The amount rolls to its value. Compactness is decided by the final
+ * figure, not the rolling one, so a hero number never flips from
+ * "99,000" to "100K" halfway through. Screen readers get the final
+ * figure once; the rolling digits are hidden from them.
  */
 function Money({ value, size }: { value: number; size: 'kpi' | 'hero' }) {
   const hero = size === 'hero';
-  const { code, amount } = currencyParts(value, {
-    compact: hero && value >= 100_000,
-  });
+  const compact = hero && value >= 100_000;
+  const rolling = useCountUp(value);
+  const { code, amount } = currencyParts(rolling, { compact });
   return (
     <p
       className="text-foreground flex items-baseline gap-1.5 leading-none"
       title={formatCurrency(value)}
     >
+      <span className="sr-only">{formatCurrency(value)}</span>
       <span
+        aria-hidden
         className={cn(
           'text-muted-foreground font-medium',
           hero ? 'text-base sm:text-lg' : 'text-sm'
@@ -649,6 +611,7 @@ function Money({ value, size }: { value: number; size: 'kpi' | 'hero' }) {
         {code}
       </span>
       <span
+        aria-hidden
         className={cn(
           'font-semibold tracking-tight',
           hero ? 'text-4xl sm:text-5xl' : 'text-[1.75rem]'
@@ -677,7 +640,8 @@ function KpiCard({
   previous: number | null;
 }) {
   return (
-    <section
+    <motion.section
+      variants={rise}
       aria-label={label}
       className="border-border bg-card flex flex-col rounded-2xl border p-4 shadow-xs sm:p-5"
     >
@@ -730,7 +694,7 @@ function KpiCard({
           </p>
         </>
       )}
-    </section>
+    </motion.section>
   );
 }
 
@@ -743,24 +707,40 @@ function KpiCard({
 function DeltaBadge({ change }: { change: number | null }) {
   const base =
     'inline-flex shrink-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums [&_svg]:size-3';
+  // Pops in once its figure has mostly rolled into place, and again
+  // whenever the percentage changes (the key), so a new period visibly
+  // brings a new comparison.
+  const pop = {
+    initial: { opacity: 0, scale: 0.85 },
+    animate: { opacity: 1, scale: 1 },
+    transition: { ...SPRING, delay: 0.3 },
+  };
 
   if (change === null) {
     return (
-      <span className={cn(base, 'bg-success/8 text-success')}>
+      <motion.span
+        key="new"
+        {...pop}
+        className={cn(base, 'bg-success/8 text-success')}
+      >
         <ArrowUp aria-hidden />
         New
         <span className="sr-only"> this period, nothing in the last</span>
-      </span>
+      </motion.span>
     );
   }
 
   const rounded = Math.round(change * 10) / 10;
   if (rounded === 0) {
     return (
-      <span className={cn(base, 'bg-muted text-muted-foreground')}>
+      <motion.span
+        key="flat"
+        {...pop}
+        className={cn(base, 'bg-muted text-muted-foreground')}
+      >
         <Minus aria-hidden />
         0%
-      </span>
+      </motion.span>
     );
   }
 
@@ -770,7 +750,9 @@ function DeltaBadge({ change }: { change: number | null }) {
     maximumFractionDigits: 1,
   })}%`;
   return (
-    <span
+    <motion.span
+      key={`${up ? '+' : '-'}${text}`}
+      {...pop}
       className={cn(
         base,
         up ? 'bg-success/8 text-success' : 'bg-danger/8 text-danger'
@@ -779,7 +761,7 @@ function DeltaBadge({ change }: { change: number | null }) {
       {up ? <ArrowUp aria-hidden /> : <ArrowDown aria-hidden />}
       <span className="sr-only">{up ? 'Up ' : 'Down '}</span>
       {text}
-    </span>
+    </motion.span>
   );
 }
 
@@ -827,13 +809,20 @@ function SegmentTile({
 }) {
   const t = TONE[tone];
   const lit = count !== null && count > 0;
+  const rolling = Math.round(useCountUp(count ?? 0, 0.7));
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onSelect}
       aria-pressed={active}
       disabled={count === null}
       title={hint}
+      // It's a control, so it answers the pointer: a lift on hover and a
+      // press on click. The cards around it don't move; they aren't
+      // clickable, and a lift would promise that they were.
+      whileHover={count === null ? undefined : { y: -2 }}
+      whileTap={count === null ? undefined : { scale: 0.98 }}
+      transition={SPRING}
       className={cn(
         'group bg-card focus-visible:ring-ring/40 flex flex-col items-start rounded-xl border px-4 py-3 text-left transition-[background-color,border-color,box-shadow] focus:outline-none focus-visible:ring-2 disabled:cursor-default',
         active ? cn('ring-4', t.active) : lit ? t.idle : 'border-border',
@@ -854,10 +843,11 @@ function SegmentTile({
         <span className="bg-muted mt-2 h-6 w-12 animate-pulse rounded" />
       ) : (
         <span className="text-foreground mt-1 text-2xl font-semibold tracking-tight">
-          {count.toLocaleString('en')}
+          <span className="sr-only">{count.toLocaleString('en')}</span>
+          <span aria-hidden>{rolling.toLocaleString('en')}</span>
         </span>
       )}
-    </button>
+    </motion.button>
   );
 }
 
@@ -913,26 +903,11 @@ const SEGMENT_COPY: Record<
   },
 };
 
-function haystack(deal: Deal, stageName: Map<string, string>): string {
-  return [
-    vehicleName(deal),
-    deal.title,
-    deal.contact?.name,
-    deal.contact?.phone,
-    deal.contact?.plate_number,
-    stageName.get(deal.stage_id),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-}
-
 function JobsTable({
   rows,
   loading,
   segment,
   term,
-  rawQuery,
   expanded,
   onExpand,
   onClear,
@@ -943,21 +918,23 @@ function JobsTable({
   loading: boolean;
   segment: Segment;
   term: string;
-  rawQuery: string;
   expanded: boolean;
   onExpand: () => void;
   onClear: () => void;
   stageName?: Map<string, string>;
-  onOpen: () => void;
+  onOpen: (deal: Deal) => void;
 }) {
   const searching = term.length > 0;
   const copy = SEGMENT_COPY[segment];
-  const title = searching ? `Results for “${rawQuery}”` : copy.title;
-  const caption = searching ? 'Every job, newest first' : copy.caption;
-  const empty = searching ? `No jobs match “${rawQuery}”.` : copy.empty;
+  const title = searching ? `Results for “${term}”` : copy.title;
+  const caption = searching ? 'Every job, best match first' : copy.caption;
+  const empty = searching ? `No jobs match “${term}”.` : copy.empty;
   const visible = expanded ? rows : rows.slice(0, ROW_LIMIT);
   const showMissing = !searching && segment === 'info';
   const owed = !searching && segment === 'payments';
+  // A new list (another tile, a search) cascades in afresh; expanding
+  // the same list only brings in the rows that were hidden.
+  const listKey = `${segment}|${term}|${loading ? 'loading' : 'ready'}`;
 
   return (
     <section
@@ -965,19 +942,28 @@ function JobsTable({
       className="border-border bg-card overflow-hidden rounded-2xl border shadow-xs"
     >
       <header className="flex items-start gap-3 px-4 pt-4 pb-3 sm:px-5">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 className="text-foreground truncate text-[15px] font-semibold">
-              {title}
-            </h2>
-            {!loading && rows.length > 0 && (
-              <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums">
-                {rows.length}
-              </span>
-            )}
-          </div>
-          <p className="text-muted-foreground mt-0.5 text-xs">{caption}</p>
-        </div>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={title}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.18, ease: EASE_OUT }}
+            className="min-w-0"
+          >
+            <div className="flex items-center gap-2">
+              <h2 className="text-foreground truncate text-[15px] font-semibold">
+                {title}
+              </h2>
+              {!loading && rows.length > 0 && (
+                <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums">
+                  {rows.length}
+                </span>
+              )}
+            </div>
+            <p className="text-muted-foreground mt-0.5 text-xs">{caption}</p>
+          </motion.div>
+        </AnimatePresence>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           {(searching || segment !== 'top') && (
             <Button
@@ -1033,7 +1019,12 @@ function JobsTable({
               </th>
             </tr>
           </thead>
-          <tbody className="divide-border divide-y">
+          <motion.tbody
+            key={listKey}
+            initial="hidden"
+            animate="show"
+            className="divide-border divide-y"
+          >
             {loading
               ? [0, 1, 2, 3].map((i) => (
                   <tr key={i}>
@@ -1057,16 +1048,17 @@ function JobsTable({
                     </td>
                   </tr>
                 ))
-              : visible.map((row) => (
+              : visible.map((row, i) => (
                   <JobRow
                     key={row.deal.id}
+                    index={i}
                     row={row}
                     stage={stageName?.get(row.deal.stage_id)}
                     showMissing={showMissing}
                     onOpen={onOpen}
                   />
                 ))}
-          </tbody>
+          </motion.tbody>
         </table>
       </div>
 
@@ -1113,23 +1105,26 @@ function JobsTable({
 }
 
 /**
- * One job. The whole row opens the Jobs board for pointer users; the
- * vehicle name is the real link, so keyboard and screen-reader users
- * get one tab stop per row rather than a clickable <tr> they can't
- * reach.
+ * One job. The whole row opens that job's card on the Jobs board for
+ * pointer users; the vehicle name is the real link, so keyboard and
+ * screen-reader users get one tab stop per row rather than a clickable
+ * <tr> they can't reach.
  */
 function JobRow({
+  index,
   row,
   stage,
   showMissing,
   onOpen,
 }: {
+  index: number;
   row: TableRow;
   stage?: string;
   showMissing: boolean;
-  onOpen: () => void;
+  onOpen: (deal: Deal) => void;
 }) {
   const { deal } = row;
+  const href = `/pipelines?job=${encodeURIComponent(deal.id)}`;
   const customer = deal.contact?.name || deal.contact?.phone || 'No customer';
   const settled =
     deal.deposit_paid || deal.status === 'won' || Boolean(deal.collected_at);
@@ -1140,8 +1135,10 @@ function JobRow({
   );
 
   return (
-    <tr
-      onClick={onOpen}
+    <motion.tr
+      variants={listItem}
+      custom={index}
+      onClick={() => onOpen(deal)}
       className="hover:bg-muted/40 cursor-pointer transition-colors"
     >
       <td className="text-muted-foreground hidden px-5 py-3 whitespace-nowrap tabular-nums sm:table-cell">
@@ -1157,7 +1154,7 @@ function JobRow({
           />
           <div className="min-w-0">
             <Link
-              href="/pipelines"
+              href={href}
               onClick={(e) => e.stopPropagation()}
               className="text-foreground block truncate font-medium hover:underline focus:outline-none focus-visible:underline"
             >
@@ -1200,7 +1197,7 @@ function JobRow({
       <td className="hidden py-3 pr-4 pl-2 text-right whitespace-nowrap sm:table-cell sm:pr-5">
         {trailing}
       </td>
-    </tr>
+    </motion.tr>
   );
 }
 

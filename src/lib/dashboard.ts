@@ -45,7 +45,12 @@ export const PERIODS: readonly PeriodOption[] = [
   { id: 'all', label: 'All time', days: null },
 ];
 
-export const DEFAULT_PERIOD: PeriodId = '30d';
+/**
+ * The dashboard opens on everything. A short window looks broken on a
+ * quiet month (every figure reads AED 0), and "All time" is also the
+ * one setting where these totals match the Jobs screen exactly.
+ */
+export const DEFAULT_PERIOD: PeriodId = 'all';
 
 export function isPeriodId(value: unknown): value is PeriodId {
   return PERIODS.some((p) => p.id === value);

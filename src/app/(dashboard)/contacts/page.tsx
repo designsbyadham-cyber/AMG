@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { SearchParamReader } from '@/components/layout/search-param-reader';
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag } from '@/types';
 import { SERVICE_CHIP_CLASS, getServiceTypes } from '@/lib/services';
@@ -176,6 +177,14 @@ export default function ContactsPage() {
     setDetailOpen(true);
   }
 
+  // `?customer=<id>` deep link from the dashboard search. The detail
+  // view loads by id, so this works whatever page of the list is shown.
+  const openFromLink = useCallback((contactId: string | null) => {
+    if (!contactId) return;
+    setDetailContactId(contactId);
+    setDetailOpen(true);
+  }, []);
+
   function confirmDelete(contact: Contact) {
     setDeleteTarget(contact);
     setDeleteConfirmOpen(true);
@@ -208,6 +217,10 @@ export default function ContactsPage() {
 
   return (
     <div className="space-y-6">
+      <Suspense fallback={null}>
+        <SearchParamReader name="customer" onChange={openFromLink} />
+      </Suspense>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

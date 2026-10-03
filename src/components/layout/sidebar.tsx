@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { EASE_OUT, SPRING } from "@/lib/motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useTotalUnread } from "@/hooks/use-total-unread";
 import {
@@ -112,6 +114,19 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const { profile, profileLoading, account, accountRole, signOut } = useAuth();
   const totalUnread = useTotalUnread();
   const [outreachOpen, setOutreachOpen] = useState(true);
+  const [outreachAnimating, setOutreachAnimating] = useState(false);
+
+  // The row you pressed, held until the route catches up. The highlight
+  // starts moving on the press itself rather than after the next page
+  // has loaded, which is the difference between a nav that answers and
+  // one that lags. Cleared the moment the pathname changes (React's
+  // reset-on-prop-change pattern), so the URL stays the truth.
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [seenPath, setSeenPath] = useState(pathname);
+  if (seenPath !== pathname) {
+    setSeenPath(pathname);
+    setPendingHref(null);
+  }
 
   // Only surface the account-name strip when it actually carries
   // information. A solo user's personal account is named after them
@@ -149,11 +164,15 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   }, [open, onClose]);
 
   function isRouteActive(href: string) {
+    if (pendingHref) return pendingHref === href;
     return pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
   }
 
   return (
-    <>
+    // One LayoutGroup over the whole sidebar, so the highlight can glide
+    // from a primary row down into Outreach or Settings rather than
+    // vanishing in one list and reappearing in another. Renders no DOM.
+    <LayoutGroup id="sidebar-nav">
       {/* Backdrop — only exists on mobile and only when open. Clicking
           it closes the drawer. Hidden from lg+ since the sidebar is
           part of the main flex row there. */}
@@ -307,7 +326,9 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           <div className="mx-3 shrink-0 border-t border-border" />
 
           {/* ── Navigation ────────────────────────────────────────── */}
-          <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+          {/* `layoutScroll` lets the sliding highlight measure correctly
+              when the nav is scrolled. */}
+          <motion.nav layoutScroll className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
             <ul className="flex flex-col gap-0.5">
               {primaryNav.map((item) => (
                 <NavRow
@@ -315,6 +336,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                   item={item}
                   active={isRouteActive(item.href)}
                   count={item.href === "/inbox" ? totalUnread : 0}
+                  onNavigate={setPendingHref}
                 />
               ))}
             </ul>
@@ -335,20 +357,39 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 Outreach
               </button>
 
-              {outreachOpen && (
-                <ul className="mt-0.5 flex flex-col gap-0.5">
-                  {outreachNav.map((item) => (
-                    <NavRow
-                      key={item.href}
-                      item={item}
-                      active={isRouteActive(item.href)}
-                      indented
-                    />
-                  ))}
-                </ul>
-              )}
+              <AnimatePresence initial={false}>
+                {outreachOpen && (
+                  <motion.ul
+                    key="outreach"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.28, ease: EASE_OUT }}
+                    // Clip only while the height is moving. At rest the
+                    // list must not clip: the active dash sits outside
+                    // it on the panel edge, and the highlight glides in
+                    // from rows above it.
+                    onAnimationStart={() => setOutreachAnimating(true)}
+                    onAnimationComplete={() => setOutreachAnimating(false)}
+                    className={cn(
+                      "mt-0.5 flex flex-col gap-0.5",
+                      outreachAnimating && "overflow-hidden",
+                    )}
+                  >
+                    {outreachNav.map((item) => (
+                      <NavRow
+                        key={item.href}
+                        item={item}
+                        active={isRouteActive(item.href)}
+                        indented
+                        onNavigate={setPendingHref}
+                      />
+                    ))}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
             </div>
-          </nav>
+          </motion.nav>
 
           {/* ── Settings ──────────────────────────────────────────── */}
           <div className="shrink-0 border-t border-border px-3 py-3">
@@ -356,12 +397,13 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               <NavRow
                 item={{ href: "/settings", label: "Settings", icon: Settings }}
                 active={isRouteActive("/settings")}
+                onNavigate={setPendingHref}
               />
             </ul>
           </div>
         </div>
       </aside>
-    </>
+    </LayoutGroup>
   );
 }
 
@@ -389,44 +431,68 @@ function RoleChip({ role }: { role: AccountRole }) {
  * in peripheral vision — a grey fill alone is easy to miss on a white
  * panel, and colouring the whole row would put a second loud element
  * next to the page it already highlights.
+ *
+ * Bubble and dash are each one shared element (`layoutId`) rather than
+ * one per row, so changing section slides them to the new row instead
+ * of switching one off and another on.
  */
 function NavRow({
   item,
   active,
   count = 0,
   indented,
+  onNavigate,
 }: {
   item: NavItem;
   active: boolean;
   count?: number;
   indented?: boolean;
+  /** Fires for in-app navigation only, never for Ctrl/Cmd-click. */
+  onNavigate?: (href: string) => void;
 }) {
   return (
     <li className="relative">
       {active && (
-        <span
+        <motion.span
+          layoutId="nav-bubble"
           aria-hidden
+          transition={SPRING}
+          className="absolute inset-0 rounded-lg bg-muted"
+        />
+      )}
+      {active && (
+        <motion.span
+          layoutId="nav-dash"
+          aria-hidden
+          transition={SPRING}
           // -left-3 escapes the nav's px-3 to sit flush on the panel edge.
-          className="absolute -left-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary"
+          // Centred with a negative margin rather than translate-y: the
+          // layout animation owns this element's transform.
+          className="absolute -left-3 top-1/2 -mt-2.5 h-5 w-[3px] rounded-r-full bg-primary"
         />
       )}
       <Link
         href={item.href}
         aria-current={active ? "page" : undefined}
+        onNavigate={() => onNavigate?.(item.href)}
         className={cn(
           // Taller on mobile so fingers can hit the row reliably (≥44px).
-          "flex items-center gap-2.5 rounded-lg px-2 py-2.5 text-sm transition-colors lg:py-2",
+          // `relative` lifts the content above the sliding bubble.
+          "relative flex items-center gap-2.5 rounded-lg px-2 py-2.5 text-sm transition-[color,background-color,scale] duration-200 lg:py-2",
           indented && "pl-4",
           active
-            ? "bg-muted font-semibold text-foreground"
-            : "font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            ? "font-semibold text-foreground"
+            : "font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground active:scale-[0.99]",
         )}
       >
         <item.icon
           // Lighter than the lucide default so the icon set reads as one
           // unified line weight rather than as bold glyphs.
           strokeWidth={1.75}
-          className={cn("size-[18px] shrink-0", active ? "text-primary" : "text-muted-foreground")}
+          className={cn(
+            "size-[18px] shrink-0 transition-colors duration-200",
+            active ? "text-primary" : "text-muted-foreground",
+          )}
         />
         <span className="min-w-0 flex-1 truncate">{item.label}</span>
         {item.beta && (

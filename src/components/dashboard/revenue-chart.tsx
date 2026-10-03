@@ -115,7 +115,9 @@ export function RevenueChart({
             stroke: 'var(--card)',
             strokeWidth: 2,
           }}
-          animationDuration={500}
+          // Draws in alongside the numbers rolling up beneath it.
+          animationDuration={900}
+          animationEasing="ease-out"
         />
       </AreaChart>
     </ResponsiveContainer>
